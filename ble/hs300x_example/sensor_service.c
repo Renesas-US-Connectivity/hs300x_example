@@ -31,7 +31,6 @@ typedef struct {
 	uint16_t sensor_id_user_desc_h;
 
 	uint16_t sample_rate_value_h;
-	//uint16_t sample_rate_ccc_h;
 	uint16_t sample_rate_user_desc_h;
 
 	uint16_t measurement_value_h;
@@ -41,6 +40,7 @@ typedef struct {
 } sensor_service_t;
 
 static void cleanup(ble_service_t *svc);
+static void handle_measurement_value_ccc_read(sensor_service_t *sensor_service_handle, const ble_evt_gatts_read_req_t *evt);
 static att_error_t handle_measurement_value_ccc_write(sensor_service_t *sample_service_handle,
 													  uint16_t conn_idx,
 													  uint16_t offset,
@@ -72,6 +72,19 @@ static void cleanup(ble_service_t *svc)
 	OS_FREE(sensor_service_handle);
 }
 
+/* This function is called upon read requests to characteristic attribue value */
+static void handle_measurement_value_ccc_read(sensor_service_t *sensor_service_handle, const ble_evt_gatts_read_req_t *evt)
+{
+	uint16_t ccc = 0x0000;
+
+	/* Extract the CCC value from the ble storage */
+	ble_storage_get_u16(evt->conn_idx, sensor_service_handle->measurement_value_ccc_h, &ccc);
+
+	// We're little-endian - OK to write directly from uint16_t
+	ble_gatts_read_cfm(evt->conn_idx, evt->handle, ATT_ERROR_OK, sizeof(ccc), &ccc);
+}
+
+
 /* This function is called upon write requests to CCC attribute value */
 static att_error_t handle_measurement_value_ccc_write(sensor_service_t *sample_service_handle,
 													  uint16_t conn_idx,
@@ -95,6 +108,8 @@ static att_error_t handle_measurement_value_ccc_write(sensor_service_t *sample_s
 
 		/* Store the envoy CCC value to the ble storage */
 		ble_storage_put_u32(conn_idx, sample_service_handle->measurement_value_ccc_h, ccc, true);
+
+		ble_gatts_write_cfm(conn_idx, sample_service_handle->measurement_value_ccc_h, error);
 
 	}
 
@@ -121,14 +136,7 @@ static void handle_read_req(ble_service_t *svc, const ble_evt_gatts_read_req_t *
 	}
 	else if(evt->handle == sensor_service_handle->measurement_value_ccc_h )
 	{
-		uint16_t ccc = 0x0000;
-
-		/* Extract the CCC value from the ble storage */
-		ble_storage_get_u16(evt->conn_idx, sensor_service_handle->measurement_value_ccc_h, &ccc);
-
-		// We're little-endian - OK to write directly from uint16_t
-		ble_gatts_read_cfm(evt->conn_idx, evt->handle, ATT_ERROR_OK, sizeof(ccc), &ccc);
-
+		handle_measurement_value_ccc_read(sensor_service_handle, evt);
 	}
 	/* Otherwise read operations are not permitted */
 	else
@@ -238,6 +246,8 @@ static void handle_write_req(ble_service_t *svc, const ble_evt_gatts_write_req_t
 	}
 	else if(evt->handle == sensor_service_handle->measurement_value_ccc_h)
 	{
+		//status = ATT_ERROR_OK;
+		//ble_gatts_write_cfm(evt->conn_idx, evt->handle, status);
 		status = handle_measurement_value_ccc_write(sensor_service_handle, evt->conn_idx, evt->offset, evt->length, evt->value);
 	}
 
@@ -299,12 +309,20 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
 	/* Characteristic declaration for Sample Rate*/
 	ble_uuid_from_string("44444444-5555-6666-7777-888888888888", &uuid);
 	ble_gatts_add_characteristic(&uuid,
-								 GATT_PROP_READ | GATT_PROP_WRITE, // | GATT_PROP_NOTIFY,
+								 GATT_PROP_READ | GATT_PROP_WRITE | GATT_PROP_NOTIFY,
 								 ATT_PERM_RW,
 								 4,
 								 GATTS_FLAG_CHAR_READ_REQ,
 								 NULL,
 								 &sensor_service_handle->sample_rate_value_h);
+
+	/* Define descriptor of type Client Characteristic Configuration (CCC) */
+	/*ble_uuid_create16(UUID_GATT_CLIENT_CHAR_CONFIGURATION, &uuid);
+	ble_gatts_add_descriptor(&uuid,
+							 ATT_PERM_RW,
+							 2,
+							 0,
+							 &sensor_service_handle->sample_rate_ccc_h);*/
 
 	/* Define descriptor of type Characteristic User Description (CUD) for Sensor ID */
 	ble_uuid_create16(UUID_GATT_CHAR_USER_DESCRIPTION, &uuid);
@@ -325,7 +343,6 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
 								 NULL,
 								 &sensor_service_handle->measurement_value_h);
 
-	printf("Error adding desc: %d\r\n", error);
 	/* Define descriptor of type Characteristic User Description (CUD) for Measurement Value*/
 	ble_uuid_create16(UUID_GATT_CHAR_USER_DESCRIPTION, &uuid);
 	ble_gatts_add_descriptor(&uuid,
@@ -334,14 +351,14 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
 							 0,
 							 &sensor_service_handle->measurement_value_user_desc_h);
 
-	printf("Error adding char: %d\r\n", error);
-	/* Define descriptor of type Client Characteristic Configuration (CCC) */
 	ble_uuid_create16(UUID_GATT_CLIENT_CHAR_CONFIGURATION, &uuid);
-	error= ble_gatts_add_descriptor(&uuid,
+	ble_gatts_add_descriptor(&uuid,
 							 ATT_PERM_RW,
 							 2,
 							 0,
 							 &sensor_service_handle->measurement_value_ccc_h);
+
+
 
 	/*
 	 * Register all the attribute handles so that they can be updated
@@ -351,6 +368,7 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
 							   &sensor_service_handle->sensor_id_value_h,
 							   &sensor_service_handle->sensor_id_user_desc_h,
 							   &sensor_service_handle->sample_rate_value_h,
+							   //&sensor_service_handle->sample_rate_ccc_h,
 							   &sensor_service_handle->sample_rate_user_desc_h,
 							   &sensor_service_handle->measurement_value_h,
 							   &sensor_service_handle->measurement_value_user_desc_h,

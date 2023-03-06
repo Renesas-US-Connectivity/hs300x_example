@@ -217,5 +217,5 @@ static hs300x_error_t perform_measurement(hs300x_data_t *sample)
  */
 static void process_measurement(hs300x_data_t sample)
 {
-    printf("Sample Rate (ms): %d, Humidity (% RH): %.3f, Temp (C): %.3f\r\n", hs300x_task_get_sample_rate(), sample.humidity_rh_pct, sample.temp_deg_c);
+    printf("Sample Rate (ms): %d, Humidity (%%RH): %.3f, Temp (C): %.3f\r\n", hs300x_task_get_sample_rate(), sample.humidity_rh_pct, sample.temp_deg_c);
 }
