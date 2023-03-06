@@ -25,10 +25,34 @@ static hs300x_error_t perform_measurement(hs300x_data_t *sample);
 static void process_measurement(hs300x_data_t sample);
 
 __RETAINED_RW static hs300x_handle_t hs300x_handle = {0};
+__RETAINED_RW static uint32_t sensor_id = 0xFFFFFFFF;
+__RETAINED_RW static uint32_t sample_rate_ms = 1000;
+__RETAINED OS_MUTEX sample_rate_mutex = NULL;
 
 // See hs300x_resolution_t for resolution options
 hs300x_resolution_t user_humidity_resolution = HS300x_RESOLUTION_10_BITS;
 hs300x_resolution_t user_temperature_resolution = HS300x_RESOLUTION_10_BITS;
+
+uint32_t hs300x_task_get_sample_rate()
+{
+	uint32_t temp = 0;
+	OS_MUTEX_GET(sample_rate_mutex, OS_MUTEX_FOREVER);
+	temp = sample_rate_ms;
+	OS_MUTEX_PUT(sample_rate_mutex);
+	return temp;
+}
+
+uint32_t hs300x_task_get_sensor_id()
+{
+	return sensor_id;
+}
+
+void hs300x_task_set_sample_rate(uint32_t rate)
+{
+	OS_MUTEX_GET(sample_rate_mutex, OS_MUTEX_FOREVER);
+	sample_rate_ms = rate;
+	OS_MUTEX_PUT(sample_rate_mutex);
+}
 
 /**
  * \brief Initialize hs300x_handle
@@ -75,11 +99,13 @@ static const char * hs300x_resolution_to_string(hs300x_resolution_t res)
  */
 void hs300x_task(void *pvParameters)
 {
+	// TODO remove
     hw_gpio_set_active(HS300x_POWER_GPIO_PORT, HS300x_POWER_GPIO_PIN);
     hw_gpio_pad_latch_enable(HS300x_POWER_GPIO_PORT,HS300x_POWER_GPIO_PIN);
     hs300x_handle.power_enable->high = 1;
 
     printf("Starting HS300x example...\r\n");
+    OS_MUTEX_CREATE(sample_rate_mutex);
 
     // enable power and open the I2C port
     hs300x_power_cycle_sensor(hs300x_handle.power_enable[0]);
@@ -91,37 +117,37 @@ void hs300x_task(void *pvParameters)
     // 1. Retrieve Sensor ID
     // 2. Set Humidity / Temperature Resolution
 
-    hs300x_error_t  error = hs300x_enter_programming_mode(hs300x_handle);
+    hs300x_error_t  error = hs300x_enter_programming_mode(&hs300x_handle);
 
     // Get the Sensor ID
-    uint32_t sensor_id;
-    error = hs300x_get_sensor_id(hs300x_handle, &sensor_id);
+
+    error = hs300x_get_sensor_id(&hs300x_handle, &sensor_id);
     ASSERT_ERROR(error == HS300x_ERROR_NONE);
 
     printf("HS300x Sensor ID: %08lX\r\n", sensor_id);
 
     // Set the humidity resolution
-    error = hs300x_set_resolution(hs300x_handle, user_humidity_resolution, HS300x_RESOLUTION_TYPE_HUMIDITY);
+    error = hs300x_set_resolution(&hs300x_handle, user_humidity_resolution, HS300x_RESOLUTION_TYPE_HUMIDITY);
     ASSERT_ERROR(error == HS300x_ERROR_NONE);
 
     // Set the temperature resolution
-    error = hs300x_set_resolution(hs300x_handle, user_temperature_resolution, HS300x_RESOLUTION_TYPE_TEMPERATURE);
+    error = hs300x_set_resolution(&hs300x_handle, user_temperature_resolution, HS300x_RESOLUTION_TYPE_TEMPERATURE);
     ASSERT_ERROR(error == HS300x_ERROR_NONE);
 
     // Read back the humidity resolution
     hs300x_resolution_t humidity_resolution;
-    error = hs300x_get_resolution(hs300x_handle, HS300x_RESOLUTION_TYPE_HUMIDITY, &humidity_resolution);
+    error = hs300x_get_resolution(&hs300x_handle, HS300x_RESOLUTION_TYPE_HUMIDITY, &humidity_resolution);
     ASSERT_ERROR(error == HS300x_ERROR_NONE);
 
     // Read back the temperature resolution
     hs300x_resolution_t temp_resolution;
-    error = hs300x_get_resolution(hs300x_handle, HS300x_RESOLUTION_TYPE_TEMPERATURE,  &temp_resolution);
+    error = hs300x_get_resolution(&hs300x_handle, HS300x_RESOLUTION_TYPE_TEMPERATURE,  &temp_resolution);
     ASSERT_ERROR(error == HS300x_ERROR_NONE);
 
     printf("Humidity Resolution: %s. Temperature Resolution: %s\r\n", hs300x_resolution_to_string(humidity_resolution), hs300x_resolution_to_string(temp_resolution));
 
     // Exit programming mode
-    error = hs300x_exit_programming_mode(hs300x_handle);
+    error = hs300x_exit_programming_mode(&hs300x_handle);
     ASSERT_ERROR(error == HS300x_ERROR_NONE);
 
     for(;;)
@@ -139,7 +165,7 @@ void hs300x_task(void *pvParameters)
         }
 
         // Delay for 1 second
-        vTaskDelay(OS_MS_2_TICKS(1000));
+        vTaskDelay(OS_MS_2_TICKS(hs300x_task_get_sample_rate()));
     }
 }
 
@@ -181,7 +207,7 @@ void hs300x_task_setup_hardware()
  */
 static hs300x_error_t perform_measurement(hs300x_data_t *sample)
 {
-    return hs300x_get_measurement(hs300x_handle, true, sample);
+    return hs300x_get_measurement(&hs300x_handle, true, sample);
 }
 
 /**
@@ -191,5 +217,5 @@ static hs300x_error_t perform_measurement(hs300x_data_t *sample)
  */
 static void process_measurement(hs300x_data_t sample)
 {
-    printf("Humidity: %.3f, Temp: %.3f\r\n", sample.humidity_rh_pct, sample.temp_deg_c);
+    printf("Sample Rate (ms): %d, Humidity (% RH): %.3f, Temp (C): %.3f\r\n", hs300x_task_get_sample_rate(), sample.humidity_rh_pct, sample.temp_deg_c);
 }

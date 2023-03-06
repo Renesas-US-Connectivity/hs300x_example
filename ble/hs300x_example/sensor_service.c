@@ -31,6 +31,7 @@ typedef struct {
 	uint16_t sensor_id_user_desc_h;
 
 	uint16_t sample_rate_value_h;
+	//uint16_t sample_rate_ccc_h;
 	uint16_t sample_rate_user_desc_h;
 
 	uint16_t measurement_value_h;
@@ -47,18 +48,19 @@ static att_error_t handle_measurement_value_ccc_write(sensor_service_t *sample_s
 													  const uint8_t *value);
 
 static void handle_read_req(ble_service_t *svc, const ble_evt_gatts_read_req_t *evt);
-static att_error_t handle_sample_rate_value_write(sensor_service_t *sensor_service_handle,
+static att_error_t handle_sample_rate_write(sensor_service_t *sensor_service_handle,
 												  uint16_t conn_idx,
 												  uint16_t offset,
 												  uint16_t length,
 												  const uint8_t *value);
 
+static void handle_sample_rate_read(sensor_service_t *sensor_service_handle, const ble_evt_gatts_read_req_t *evt);
 static void handle_sensor_id_read(sensor_service_t *sensor_service_handle, const ble_evt_gatts_read_req_t *evt);
 static void handle_write_req(ble_service_t *svc, const ble_evt_gatts_write_req_t *evt);
 
 static const char sensor_id_char_user_description[]  = "Sensor ID";
 static const char sample_rate_char_user_description[]  = "Sample Rate";
-static const char measurement_value_char_user_description[]  = "Measurement (Humidity/Temp)";
+static const char measurement_value_char_user_description[]  = "Measurement Value";
 
 /* Function to be called after a cleanup event */
 static void cleanup(ble_service_t *svc)
@@ -113,6 +115,10 @@ static void handle_read_req(ble_service_t *svc, const ble_evt_gatts_read_req_t *
 	{
 		handle_sensor_id_read(sensor_service_handle, evt);
 	}
+	else if(evt->handle == sensor_service_handle->sample_rate_value_h)
+	{
+		handle_sample_rate_read(sensor_service_handle, evt);
+	}
 	else if(evt->handle == sensor_service_handle->measurement_value_ccc_h )
 	{
 		uint16_t ccc = 0x0000;
@@ -132,8 +138,28 @@ static void handle_read_req(ble_service_t *svc, const ble_evt_gatts_read_req_t *
 
 }
 
+/* This function is called upon read requests to characteristic attribue value */
+static void handle_sample_rate_read(sensor_service_t *sensor_service_handle, const ble_evt_gatts_read_req_t *evt)
+{
+	/*
+	 * Check whether the application has defined a callback function
+	 * for handling the event.
+	 */
+	if(!sensor_service_handle->cb || !sensor_service_handle->cb->get_sample_rate_cb)
+	{
+		ble_gatts_read_cfm(evt->conn_idx, evt->handle, ATT_ERROR_READ_NOT_PERMITTED, 0, NULL);
+	}
+	else
+	{
+		/*
+		 * The application should provide the requested data to the peer device.
+		 */
+		sensor_service_handle->cb->get_sample_rate_cb(&sensor_service_handle->svc, evt->conn_idx);
+	}
+}
+
 /* This function is called upon write requests to characteristic attribute value */
-static att_error_t handle_sample_rate_value_write(sensor_service_t *sensor_service_handle,
+static att_error_t handle_sample_rate_write(sensor_service_t *sensor_service_handle,
 												  uint16_t conn_idx,
 												  uint16_t offset,
 												  uint16_t length,
@@ -147,7 +173,7 @@ static att_error_t handle_sample_rate_value_write(sensor_service_t *sensor_servi
 	}
 
 	/* Check if the length of the envoy data exceed the maximum permitted */
-	else if(length != 2)
+	else if(length != sizeof(uint32_t))
 	{
 		error = ATT_ERROR_INVALID_VALUE_LENGTH;
 	}
@@ -161,12 +187,14 @@ static att_error_t handle_sample_rate_value_write(sensor_service_t *sensor_servi
 	}
 	else
 	{
-		uint8_t data = get_u16(value);
+		uint32_t data = get_u32(value);
+
+		printf("Rxd: [0]: %02X, [1]: %02X, [2]: %02X, [3]: %02X, data hex: %08X, data: %d\r\n", value[0], value[1], value[2], value[3], data, data);
 
 		/*
 		 * The application should get the data written by the peer device.
 		 */
-		sensor_service_handle->cb->set_sample_rate_cb(&sensor_service_handle->svc, conn_idx, &data);
+		sensor_service_handle->cb->set_sample_rate_cb(&sensor_service_handle->svc, conn_idx, data);
 	}
 
 	return error;
@@ -210,10 +238,11 @@ static void handle_write_req(ble_service_t *svc, const ble_evt_gatts_write_req_t
 	}
 	else if(evt->handle == sensor_service_handle->measurement_value_ccc_h)
 	{
-		status = handle_sample_rate_ccc_write(sensor_service_handle, evt->conn_idx, evt->offset, evt->length, evt->value);
+		status = handle_measurement_value_ccc_write(sensor_service_handle, evt->conn_idx, evt->offset, evt->length, evt->value);
 	}
 
-	if (status != ATT_ERROR_OK) {
+	if (status != ATT_ERROR_OK)
+	{
 		ble_gatts_write_cfm(evt->conn_idx, evt->handle, status);
 	}
 }
@@ -249,7 +278,7 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
 
 
 	/* Characteristic declaration for Sensor ID*/
-	ble_uuid_from_string("11111111-0000-0000-0000-111111111111", &uuid);
+	ble_uuid_from_string("11111111-2222-3333-4444-555555555555", &uuid);
 	ble_gatts_add_characteristic(&uuid,
 								 GATT_PROP_READ,
 								 ATT_PERM_READ,
@@ -262,7 +291,7 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
 	ble_uuid_create16(UUID_GATT_CHAR_USER_DESCRIPTION, &uuid);
 	ble_gatts_add_descriptor(&uuid,
 							 ATT_PERM_READ,
-							 sizeof(sensor_id_char_user_description),
+							 sizeof(sensor_id_char_user_description)-1, // -1 to account for NULL char
 							 0,
 							 &sensor_service_handle->sensor_id_user_desc_h);
 
@@ -270,9 +299,9 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
 	/* Characteristic declaration for Sample Rate*/
 	ble_uuid_from_string("44444444-5555-6666-7777-888888888888", &uuid);
 	ble_gatts_add_characteristic(&uuid,
-								 GATT_PROP_READ | GATT_PROP_WRITE,
+								 GATT_PROP_READ | GATT_PROP_WRITE, // | GATT_PROP_NOTIFY,
 								 ATT_PERM_RW,
-								 2,
+								 4,
 								 GATTS_FLAG_CHAR_READ_REQ,
 								 NULL,
 								 &sensor_service_handle->sample_rate_value_h);
@@ -281,32 +310,34 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
 	ble_uuid_create16(UUID_GATT_CHAR_USER_DESCRIPTION, &uuid);
 	ble_gatts_add_descriptor(&uuid,
 							 ATT_PERM_READ,
-							 sizeof(sample_rate_char_user_description),
+							 sizeof(sample_rate_char_user_description)-1,  // -1 to account for NULL char
 							 0,
 							 &sensor_service_handle->sample_rate_user_desc_h);
 
 
 	/* Characteristic declaration for Measurement Value*/
 	ble_uuid_from_string("99999999-AAAA-BBBB-CCCC-DDDDDDDDDDDD", &uuid);
-	ble_gatts_add_characteristic(&uuid,
+	ble_error_t error = ble_gatts_add_characteristic(&uuid,
 								 GATT_PROP_NOTIFY,
 								 ATT_PERM_NONE,
-								 0,
+								 1,
 								 0,
 								 NULL,
-								 &sensor_service_handle->sample_rate_value_h);
+								 &sensor_service_handle->measurement_value_h);
 
+	printf("Error adding desc: %d\r\n", error);
 	/* Define descriptor of type Characteristic User Description (CUD) for Measurement Value*/
 	ble_uuid_create16(UUID_GATT_CHAR_USER_DESCRIPTION, &uuid);
 	ble_gatts_add_descriptor(&uuid,
 							 ATT_PERM_READ,
-							 sizeof(measurement_value_char_user_description),
+							 sizeof(measurement_value_char_user_description)-1, // -1 to account for NULL char
 							 0,
 							 &sensor_service_handle->measurement_value_user_desc_h);
 
+	printf("Error adding char: %d\r\n", error);
 	/* Define descriptor of type Client Characteristic Configuration (CCC) */
 	ble_uuid_create16(UUID_GATT_CLIENT_CHAR_CONFIGURATION, &uuid);
-	ble_gatts_add_descriptor(&uuid,
+	error= ble_gatts_add_descriptor(&uuid,
 							 ATT_PERM_RW,
 							 2,
 							 0,
@@ -331,15 +362,15 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
 
 	/* Set default attribute values */
 	ble_gatts_set_value(sensor_service_handle->sensor_id_user_desc_h,
-						sizeof(sensor_id_char_user_description),
+						sizeof(sensor_id_char_user_description)-1,
 						sensor_id_char_user_description);
 
 	ble_gatts_set_value(sensor_service_handle->sample_rate_user_desc_h,
-						sizeof(sample_rate_char_user_description),
+						sizeof(sample_rate_char_user_description)-1,
 						sample_rate_char_user_description);
 
 	ble_gatts_set_value(sensor_service_handle->measurement_value_user_desc_h,
-						sizeof(measurement_value_char_user_description),
+						sizeof(measurement_value_char_user_description)-1,
 						measurement_value_char_user_description);
 
 	/* Register the BLE service in BLE framework */
@@ -353,12 +384,24 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
 /*
  * This function should be called by the application as a response to read requests
  */
+void sensor_service_get_sample_rate_cfm(ble_service_t *svc, uint16_t conn_idx, att_error_t status, const uint32_t *value)
+{
+	sensor_service_t *sensor_service_handle = (sensor_service_t *) svc;
+
+	/* This function should be used as a response for every read request */
+	ble_gatts_read_cfm(conn_idx, sensor_service_handle->sample_rate_value_h, status, sizeof(uint32_t), (uint8_t*)value);
+}
+
+
+/*
+ * This function should be called by the application as a response to read requests
+ */
 void sensor_service_get_sensor_id_cfm(ble_service_t *svc, uint16_t conn_idx, att_error_t status, const uint32_t *value)
 {
 	sensor_service_t *sensor_service_handle = (sensor_service_t *) svc;
 
 	/* This function should be used as a response for every read request */
-	ble_gatts_read_cfm(conn_idx, sensor_service_handle->sensor_id_value_h, ATT_ERROR_OK, sizeof(uint32_t), *value);
+	ble_gatts_read_cfm(conn_idx, sensor_service_handle->sensor_id_value_h, status, sizeof(uint32_t), (uint8_t*)value);
 }
 
 
@@ -377,7 +420,7 @@ void sensor_service_notify_measurement(ble_service_t *svc, uint16_t conn_idx, co
 	 */
 	if (ccc & GATT_CCC_NOTIFICATIONS)
 	{
-		ble_gatts_send_event(conn_idx, sensor_service_handle->measurement_value_h, GATT_EVENT_NOTIFICATION, sizeof(uint32_t), *value);
+		ble_gatts_send_event(conn_idx, sensor_service_handle->measurement_value_h, GATT_EVENT_NOTIFICATION, sizeof(uint32_t), (uint8_t *)value);
 	}
 }
 
@@ -385,7 +428,7 @@ void sensor_service_notify_measurement(ble_service_t *svc, uint16_t conn_idx, co
  * Notify all the connected peer devices that characteristic attribute value
  * has been updated
  */
-void sensor_service_notify_measurement_to_all_connected(ble_service_t *svc, const uint8_t *value)
+void sensor_service_notify_measurement_to_all_connected(ble_service_t *svc, const uint32_t *value)
 {
 	uint8_t num_conn;
 	uint16_t *conn_idx_array;

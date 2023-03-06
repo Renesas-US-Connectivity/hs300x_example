@@ -23,9 +23,11 @@
 #include "sys_power_mgr.h"
 #include "sys_watchdog.h"
 #include "hs300x_task.h"
+#include "ble_task.h"
 
 /* Task priorities */
-#define mainBLE_PERIPHERAL_TASK_PRIORITY              ( OS_TASK_PRIORITY_NORMAL )
+#define mainBLE_TASK_PRIORITY              ( OS_TASK_PRIORITY_NORMAL )
+#define mainHS3001_TASK_PRIORITY           ( OS_TASK_PRIORITY_NORMAL )
 
 #if dg_configUSE_WDOG
 INITIALISED_PRIVILEGED_DATA int8_t idle_task_wdog_id = -1;
@@ -100,18 +102,25 @@ static void system_init( void *pvParameters )
         ble_mgr_init();
 
         /* Start the BLE Peripheral application task. */
+        OS_TASK_CREATE("Ble Task",                /* The text name assigned to the task, for
+                                                           debug only; not used by the kernel. */
+                       ble_task,             /* The function that implements the task. */
+                       NULL,                            /* The parameter passed to the task. */
+                       4096,                            /* The number of bytes to allocate to the
+                                                           stack of the task. */
+					   mainBLE_TASK_PRIORITY,/* The priority assigned to the task. */
+                       handle);                         /* The task handle. */
+        OS_ASSERT(handle);
+
+
+        /* Start the BLE Peripheral application task. */
         OS_TASK_CREATE("HS300x Sample Task",                /* The text name assigned to the task, for
                                                            debug only; not used by the kernel. */
                        hs300x_task,             /* The function that implements the task. */
                        NULL,                            /* The parameter passed to the task. */
-#if defined CONFIG_RETARGET
-                       1024,                            /* The number of bytes to allocate to the
+                       4096,                            /* The number of bytes to allocate to the
                                                            stack of the task. */
-#else
-                       200 * OS_STACK_WORD_SIZE,        /* The number of bytes to allocate to the
-                                                           stack of the task. */
-#endif
-                       mainBLE_PERIPHERAL_TASK_PRIORITY,/* The priority assigned to the task. */
+					   mainHS3001_TASK_PRIORITY,/* The priority assigned to the task. */
                        handle);                         /* The task handle. */
         OS_ASSERT(handle);
 
@@ -126,7 +135,6 @@ static void system_init( void *pvParameters )
 int main( void )
 {
         OS_BASE_TYPE status;
-
 
         /* Start SysInit task. */
         status = OS_TASK_CREATE("SysInit",                /* The text name assigned to the task, for

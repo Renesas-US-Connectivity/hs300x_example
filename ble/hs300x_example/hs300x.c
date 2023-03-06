@@ -9,7 +9,7 @@
 static float calc_measurement_time(hs300x_resolution_t humidity_res, hs300x_resolution_t temp_res);
 static void convert_raw_to_humid_temp(uint8_t *raw_data, bool data_includes_temp, hs300x_data_t *calculated_data);
 static float measurement_time_from_resolution(hs300x_resolution_t res);
-static hs300x_error_t send_programming_mode_enter(hs300x_handle_t hs300x_handle);
+static hs300x_error_t send_programming_mode_enter(hs300x_handle_t* hs300x_handle);
 
 /**
  * \brief Calculate the time for a measurement based on the resolution settings
@@ -59,10 +59,10 @@ static void convert_raw_to_humid_temp(uint8_t *raw_data, bool data_includes_temp
  * \sa ad_i2c_close()
  *
  */
-void hs300x_close(hs300x_handle_t hs300x_handle)
+void hs300x_close(hs300x_handle_t* hs300x_handle)
 {
-    ASSERT_WARNING(hs300x_handle.i2c_handle)
-    hs300x_error_t error = ad_i2c_close(hs300x_handle.i2c_handle, true);
+    ASSERT_WARNING(hs300x_handle->i2c_handle)
+    hs300x_error_t error = ad_i2c_close(hs300x_handle->i2c_handle, true);
     ASSERT_ERROR(error == HS300x_ERROR_NONE);
 }
 
@@ -76,9 +76,9 @@ void hs300x_close(hs300x_handle_t hs300x_handle)
  * \note
  * See section 6.8. The command to enter programming mode must be sent within 10ms of chip power up.
  */
-hs300x_error_t hs300x_enter_programming_mode(hs300x_handle_t hs300x_handle)
+hs300x_error_t hs300x_enter_programming_mode(hs300x_handle_t* hs300x_handle)
 {
-    hs300x_power_cycle_sensor(hs300x_handle.power_enable[0]);
+    hs300x_power_cycle_sensor(hs300x_handle->power_enable[0]);
     return send_programming_mode_enter(hs300x_handle);
 }
 
@@ -90,7 +90,7 @@ hs300x_error_t hs300x_enter_programming_mode(hs300x_handle_t hs300x_handle)
  * \return error indicating status of command
  *
  */
-hs300x_error_t hs300x_exit_programming_mode(hs300x_handle_t hs300x_handle)
+hs300x_error_t hs300x_exit_programming_mode(hs300x_handle_t* hs300x_handle)
 {
     return  hs300x_write(hs300x_handle, exit_programming_mode_cmd, sizeof(exit_programming_mode_cmd));
 }
@@ -107,12 +107,12 @@ hs300x_error_t hs300x_exit_programming_mode(hs300x_handle_t hs300x_handle)
  * \return error indicating status of the operation
  *
  */
-hs300x_error_t hs300x_get_measurement(hs300x_handle_t hs300x_handle, bool data_includes_temp, hs300x_data_t *calculated_data)
+hs300x_error_t hs300x_get_measurement(hs300x_handle_t* hs300x_handle, bool data_includes_temp, hs300x_data_t *calculated_data)
 {
     hs300x_error_t error = hs300x_start_measurement(hs300x_handle);
     if(error == HS300x_ERROR_NONE)
     {
-        float measurement_time = calc_measurement_time(hs300x_handle.humidity_res, hs300x_handle.temp_res);
+        float measurement_time = calc_measurement_time(hs300x_handle->humidity_res, hs300x_handle->temp_res);
         // Round measurement time up and add some additional delay to account for worst case measurement time
         uint32_t measurement_delay = HS300x_MEASUREMENT_TIME_MARGIN_ms + ((uint32_t)measurement_time + 1);
         OS_DELAY_MS(measurement_delay);
@@ -142,7 +142,7 @@ hs300x_error_t hs300x_get_measurement(hs300x_handle_t hs300x_handle, bool data_i
  *
  * \note The sensor must be in programming mode to access Non-volatile memory. See section 6.8
  */
-hs300x_error_t hs300x_get_resolution(hs300x_handle_t hs300x_handle, hs300x_resolution_type_t type, hs300x_resolution_t *resolution)
+hs300x_error_t hs300x_get_resolution(hs300x_handle_t* hs300x_handle, hs300x_resolution_type_t type, hs300x_resolution_t *resolution) // TODO do not need separate resolution. Just update the handle
 {
     // use power cycle to reset device and put into programming mode
 
@@ -183,7 +183,7 @@ hs300x_error_t hs300x_get_resolution(hs300x_handle_t hs300x_handle, hs300x_resol
  *
  * \note The sensor must be in programming mode to access Non-volatile memory. See section 6.8
  */
-hs300x_error_t hs300x_get_sensor_id(hs300x_handle_t hs300x_handle, uint32_t *id)
+hs300x_error_t hs300x_get_sensor_id(hs300x_handle_t *hs300x_handle, uint32_t* id)
 {
    hs300x_error_t error = hs300x_write(hs300x_handle, read_sensor_id_upper_cmd, sizeof(read_sensor_id_upper_cmd));
    // cmd takes 120us to process
@@ -275,9 +275,9 @@ void hs300x_power_cycle_sensor(gpio_config power_enable)
  * \return error code indicating status of operation
  *
  */
-hs300x_error_t hs300x_read(hs300x_handle_t hs300x_handle, uint8_t *response_buffer, size_t response_length)
+hs300x_error_t hs300x_read(hs300x_handle_t* hs300x_handle, uint8_t *response_buffer, size_t response_length)
 {
-    return ad_i2c_read(hs300x_handle.i2c_handle, response_buffer, response_length, HW_I2C_F_ADD_STOP);
+    return ad_i2c_read(hs300x_handle->i2c_handle, response_buffer, response_length, HW_I2C_F_ADD_STOP);
 }
 
 /* \brief Convenience function to convert hs300x_resolution_t to a string
@@ -288,7 +288,7 @@ hs300x_error_t hs300x_read(hs300x_handle_t hs300x_handle, uint8_t *response_buff
  *
  *\note The sensor must be in programming mode to access Non-volatile memory. See section 6.8
  */
-hs300x_error_t hs300x_set_resolution(hs300x_handle_t hs300x_handle, hs300x_resolution_t resolution, hs300x_resolution_type_t type)
+hs300x_error_t hs300x_set_resolution(hs300x_handle_t* hs300x_handle, hs300x_resolution_t resolution, hs300x_resolution_type_t type)
 {
     ASSERT_ERROR(resolution <= HS300x_RESOLUTION_14_BITS);
 
@@ -314,10 +314,15 @@ hs300x_error_t hs300x_set_resolution(hs300x_handle_t hs300x_handle, hs300x_resol
                 error = hs300x_write(hs300x_handle, new_resolution_cmd, sizeof(new_resolution_cmd));
                 // update takes 14ms, see section 6.9
                 OS_DELAY_MS(HS300x_DELAY_14_ms);
+
+                if(error == HS300x_ERROR_NONE)
+                {
+                	hs300x_resolution_t* new_resolution = (type == HS300x_RESOLUTION_TYPE_HUMIDITY) ? &hs300x_handle->humidity_res : &hs300x_handle->temp_res;
+                	*new_resolution = resolution;
+                }
             }
             else
             {
-                // TODO error code
                 ASSERT_ERROR(0);
             }
         }
@@ -333,7 +338,7 @@ hs300x_error_t hs300x_set_resolution(hs300x_handle_t hs300x_handle, hs300x_resol
  *
  * \return error code indicating status of write
  */
-hs300x_error_t hs300x_start_measurement(hs300x_handle_t hs300x_handle)
+hs300x_error_t hs300x_start_measurement(hs300x_handle_t* hs300x_handle)
 {
     // See section 6.5
     // need to send i2c address to start a measurement.
@@ -351,9 +356,9 @@ hs300x_error_t hs300x_start_measurement(hs300x_handle_t hs300x_handle)
  *
  * \return error code indicating status of write
  */
-hs300x_error_t hs300x_write(hs300x_handle_t hs300x_handle, const uint8_t *write_buffer, size_t write_length)
+hs300x_error_t hs300x_write(hs300x_handle_t* hs300x_handle, const uint8_t *write_buffer, size_t write_length)
 {
-    return ad_i2c_write(hs300x_handle.i2c_handle, write_buffer, write_length, HW_I2C_F_ADD_STOP);
+    return ad_i2c_write(hs300x_handle->i2c_handle, write_buffer, write_length, HW_I2C_F_ADD_STOP);
 }
 
 /**
@@ -400,7 +405,7 @@ static float measurement_time_from_resolution(hs300x_resolution_t res)
  *
  * \sa hs300x_power_cycle_sensor()
  */
-static hs300x_error_t send_programming_mode_enter(hs300x_handle_t hs300x_handle)
+static hs300x_error_t send_programming_mode_enter(hs300x_handle_t* hs300x_handle)
 {
     hs300x_error_t error = hs300x_write(hs300x_handle, enter_programming_mode_cmd, sizeof(enter_programming_mode_cmd));
     // cmd takes 120us to process. See section 6.8

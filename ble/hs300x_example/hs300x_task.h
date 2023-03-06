@@ -15,7 +15,10 @@
 #include "hs300x.h"
 
 void hs300x_task(void *pvParameters);
+uint32_t hs300x_task_get_sensor_id();
+uint32_t hs300x_task_get_sample_rate();
 void hs300x_task_reconfig_gpio_on_wake();
+void hs300x_task_set_sample_rate(uint32_t rate);
 void hs300x_task_setup_hardware();
 
 #endif /* HS3001_TASK_H_ */

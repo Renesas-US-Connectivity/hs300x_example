@@ -147,17 +147,17 @@ typedef enum
     HS300x_ERROR_I2C_ABORT_SW_ERROR = HW_I2C_ABORT_SW_ERROR,
 } hs300x_error_t;
 
-void hs300x_close(hs300x_handle_t hs300x_handle);
-hs300x_error_t hs300x_enter_programming_mode(hs300x_handle_t hs300x_handle);
-hs300x_error_t hs300x_exit_programming_mode(hs300x_handle_t hs300x_handle);
-hs300x_error_t hs300x_get_measurement(hs300x_handle_t hs300x_handle, bool data_includes_temp, hs300x_data_t *calculated_data);
-hs300x_error_t hs300x_get_resolution(hs300x_handle_t hs300x_handle, hs300x_resolution_type_t type, hs300x_resolution_t *resolution);
-hs300x_error_t hs300x_get_sensor_id(hs300x_handle_t hs300x_handle, uint32_t *id);
+void hs300x_close(hs300x_handle_t* hs300x_handle);
+hs300x_error_t hs300x_enter_programming_mode(hs300x_handle_t* hs300x_handle);
+hs300x_error_t hs300x_exit_programming_mode(hs300x_handle_t* hs300x_handle);
+hs300x_error_t hs300x_get_measurement(hs300x_handle_t* hs300x_handle, bool data_includes_temp, hs300x_data_t *calculated_data);
+hs300x_error_t hs300x_get_resolution(hs300x_handle_t* hs300x_handle, hs300x_resolution_type_t type, hs300x_resolution_t *resolution);
+hs300x_error_t hs300x_get_sensor_id(hs300x_handle_t* hs300x_handle, uint32_t *id);
 ad_i2c_handle_t hs300x_open(const ad_i2c_controller_conf_t *i2c_conf);
 void hs300x_power_cycle_sensor(gpio_config power_enable);
-hs300x_error_t hs300x_read(hs300x_handle_t hs300x_handle, uint8_t *response_buffer, size_t response_length);
-hs300x_error_t hs300x_set_resolution(hs300x_handle_t hs300x_handle, hs300x_resolution_t resolution, hs300x_resolution_type_t type);
-hs300x_error_t hs300x_start_measurement(hs300x_handle_t hs300x_handle);
-hs300x_error_t hs300x_write(hs300x_handle_t hs300x_handle, const uint8_t *write_buffer, size_t write_length);
+hs300x_error_t hs300x_read(hs300x_handle_t* hs300x_handle, uint8_t *response_buffer, size_t response_length);
+hs300x_error_t hs300x_set_resolution(hs300x_handle_t* hs300x_handle, hs300x_resolution_t resolution, hs300x_resolution_type_t type);
+hs300x_error_t hs300x_start_measurement(hs300x_handle_t* hs300x_handle);
+hs300x_error_t hs300x_write(hs300x_handle_t* hs300x_handle, const uint8_t *write_buffer, size_t write_length);
 
 #endif /* HS300x_H_ */
