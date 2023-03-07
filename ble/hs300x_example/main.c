@@ -104,32 +104,33 @@ static void system_init( void *pvParameters )
         /* Initialize BLE Manager */
         ble_mgr_init();
 
+		// create a queue to communicate measurements between the BLE task and HS3001 task
         OS_QUEUE_CREATE(sample_q, sizeof(hs300x_data_t), 5);
 
         /* Start the BLE Peripheral application task. */
         OS_TASK_CREATE("Ble Task",                /* The text name assigned to the task, for
-                                                           debug only; not used by the kernel. */
-                       ble_task,             /* The function that implements the task. */
-					   sample_q,                            /* The parameter passed to the task. */
-                       4096,                            /* The number of bytes to allocate to the
-                                                           stack of the task. */
-					   mainBLE_TASK_PRIORITY,/* The priority assigned to the task. */
-                       handle);                         /* The task handle. */
+                                                     debug only; not used by the kernel. */
+                       ble_task,             	  /* The function that implements the task. */
+					   sample_q,                  /* The parameter passed to the task. */
+                       4096,                      /* The number of bytes to allocate to the
+                                                     stack of the task. */
+					   mainBLE_TASK_PRIORITY,	  /* The priority assigned to the task. */
+                       handle);                   /* The task handle. */
         OS_ASSERT(handle);
 
 
-        /* Start the BLE Peripheral application task. */
-        OS_TASK_CREATE("HS300x Sample Task",                /* The text name assigned to the task, for
-                                                           debug only; not used by the kernel. */
-                       hs300x_task,             /* The function that implements the task. */
-					   sample_q,                            /* The parameter passed to the task. */
-                       4096,                            /* The number of bytes to allocate to the
-                                                           stack of the task. */
-					   mainHS3001_TASK_PRIORITY,/* The priority assigned to the task. */
-                       handle);                         /* The task handle. */
+        /* Start the HS3001 sampling task. */
+        OS_TASK_CREATE("HS300x Sample Task",      /* The text name assigned to the task, for
+                                                     debug only; not used by the kernel. */
+                       hs300x_task,               /* The function that implements the task. */
+					   sample_q,                  /* The parameter passed to the task. */
+                       4096,                      /* The number of bytes to allocate to the
+                                                     stack of the task. */
+					   mainHS3001_TASK_PRIORITY,  /* The priority assigned to the task. */
+                       handle);                   /* The task handle. */
         OS_ASSERT(handle);
 
-        /* the work of the SysInit task is done */
+        /* the work of the SysInit task is done, delete it */
         OS_TASK_DELETE(OS_GET_CURRENT_TASK());
 }
 /*-----------------------------------------------------------*/
@@ -146,7 +147,7 @@ int main( void )
                                                              debug only; not used by the kernel. */
                                 system_init,              /* The System Initialization task. */
                                 ( void * ) 0,             /* The parameter passed to the task. */
-                                15000,                     /* The number of bytes to allocate to the
+                                4096,                     /* The number of bytes to allocate to the
                                                              stack of the task. */
                                 OS_TASK_PRIORITY_HIGHEST, /* The priority assigned to the task. */
                                 handle );                 /* The task handle */

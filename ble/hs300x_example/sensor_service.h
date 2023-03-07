@@ -12,25 +12,24 @@
 #include <ble_service.h>
 #include "hs300x.h"
 
-/* User-defined callback functions */
+/* User-defined callback functions prototypes */
 typedef void (* sensor_svc_get_sample_rate_cb_t) (ble_service_t *svc, uint16_t conn_idx);
 typedef void (* sensor_svc_get_sensor_id_cb_t) (ble_service_t *svc, uint16_t conn_idx);
 typedef void (* sensor_svc_set_sample_rate_cb_t) (ble_service_t *svc, uint16_t conn_idx, const uint32_t value);
 
-/* User-defined callback functions */
+/* User-defined callback function structure */
 typedef struct {
 
-        /* Handler for read requests - Triggered on application context */  // TODO update comments
+        // Read request handler for the sensor sample rate
 		sensor_svc_get_sample_rate_cb_t get_sample_rate_cb;
 
+		// Read request handler for the sensor id
 		sensor_svc_get_sensor_id_cb_t get_sensor_id_cb;
 
-        /* Handler for write requests - Triggered on application context */
+        // Write request handler for sensor sample rate
         sensor_svc_set_sample_rate_cb_t set_sample_rate_cb;
 
 } sensor_service_cb_t;
-
-
 
 ble_service_t *sensor_service_init(const sensor_service_cb_t *cb);
 void sensor_service_get_sample_rate_cfm(ble_service_t *svc, uint16_t conn_idx, att_error_t status, const uint32_t *value);

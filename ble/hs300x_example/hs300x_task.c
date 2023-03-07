@@ -19,52 +19,23 @@
 #include "hs300x.h"
 #include "platform_devices.h"
 
+/* Private function prototypes */
 static void hs300x_handle_init();
 static const char * hs300x_resolution_to_string(hs300x_resolution_t res);
 static hs300x_error_t perform_measurement(hs300x_data_t *sample);
 static void process_measurement(hs300x_data_t sample);
 
+/* Private variables */
 __RETAINED_RW static hs300x_handle_t hs300x_handle = {0};
 __RETAINED_RW static uint32_t sensor_id = 0xFFFFFFFF;
 __RETAINED_RW static uint32_t sample_rate_ms = 1000;
-__RETAINED_RW OS_MUTEX sample_rate_mutex = NULL;
-__RETAINED_RW static hs300x_data_t sample = {0};
+__RETAINED_RW static OS_MUTEX sample_rate_mutex = NULL;
 __RETAINED_RW static OS_QUEUE sample_q = NULL;
-__RETAINED_RW static OS_TASK measurement_notification_task;
-
+__RETAINED_RW static OS_TASK measurement_notification_task = NULL;
 
 // See hs300x_resolution_t for resolution options
 hs300x_resolution_t user_humidity_resolution = HS300x_RESOLUTION_10_BITS;
 hs300x_resolution_t user_temperature_resolution = HS300x_RESOLUTION_10_BITS;
-
-
-void hs300x_event_queue_register(const OS_TASK task_handle)
-{
-	// Set event queue task handle
-	measurement_notification_task = task_handle;
-}
-
-
-uint32_t hs300x_task_get_sample_rate()
-{
-	uint32_t temp = 0;
-	OS_MUTEX_GET(sample_rate_mutex, OS_MUTEX_FOREVER);
-	temp = sample_rate_ms;
-	OS_MUTEX_PUT(sample_rate_mutex);
-	return temp;
-}
-
-uint32_t hs300x_task_get_sensor_id()
-{
-	return sensor_id;
-}
-
-void hs300x_task_set_sample_rate(uint32_t rate)
-{
-	OS_MUTEX_GET(sample_rate_mutex, OS_MUTEX_FOREVER);
-	sample_rate_ms = rate;
-	OS_MUTEX_PUT(sample_rate_mutex);
-}
 
 /**
  * \brief Initialize hs300x_handle
@@ -105,17 +76,15 @@ static const char * hs300x_resolution_to_string(hs300x_resolution_t res)
  * \brief HS300x sampling task. This task will read the sensor ID, set the measurement
  * resolution for both humidity and temperature to the user defined values set in
  * user_humidity_resolution and user_temperature_resolution respectively. Then a
- * measurement will be taken once a second and the results will be printed to the terminal
+ * measurement will be taken at a rate of sample_rate_ms. The results will be printed to the terminal
+ * and put on queue
+ *
+ * \param[in] pvParameters      Used to pass in a queue for measurements from the sensor
  *
  * \return void
  */
 void hs300x_task(void *pvParameters)
 {
-	// TODO remove
-    hw_gpio_set_active(HS300x_POWER_GPIO_PORT, HS300x_POWER_GPIO_PIN);
-    hw_gpio_pad_latch_enable(HS300x_POWER_GPIO_PORT,HS300x_POWER_GPIO_PIN);
-    hs300x_handle.power_enable->high = 1;
-
     sample_q = (OS_QUEUE)pvParameters;
 
     printf("Starting HS300x example...\r\n");
@@ -178,9 +147,49 @@ void hs300x_task(void *pvParameters)
             printf("Error performing measurement: error=%d\r\n", error);
         }
 
-        // Delay for 1 second
+        // Delay for sample_rate_ms
         vTaskDelay(OS_MS_2_TICKS(hs300x_task_get_sample_rate()));
     }
+}
+
+/**
+ * \brief Register for notifications every time a new measurement is taken
+ *
+ * \param[in] task_handle       handle of the task to be notified
+ *
+ * \return void
+ *
+ */
+void hs300x_task_event_queue_register(const OS_TASK task_handle)
+{
+	// Set event queue task handle
+	measurement_notification_task = task_handle;
+}
+
+/**
+ * \brief Get the sample rate for taking a measurement
+ *
+ * \return sample rate in milliseconds
+ *
+ */
+uint32_t hs300x_task_get_sample_rate()
+{
+	uint32_t temp = 0;
+	OS_MUTEX_GET(sample_rate_mutex, OS_MUTEX_FOREVER);
+	temp = sample_rate_ms;
+	OS_MUTEX_PUT(sample_rate_mutex);
+	return temp;
+}
+
+/**
+ * \brief Get the Sensor ID
+ *
+ * \return 4 byte Sensor ID
+ *
+ */
+uint32_t hs300x_task_get_sensor_id()
+{
+	return sensor_id;
 }
 
 /**
@@ -191,6 +200,21 @@ void hs300x_task(void *pvParameters)
 void hs300x_task_reconfig_gpio_on_wake()
 {
     //hw_gpio_configure(hs300x_handle.power_enable);
+}
+
+/**
+ * \brief Set the sample rate for taking a measurement
+ *
+ * \param[in] rate       new sample rate in milliseconds
+ *
+ * \return void
+ *
+ */
+void hs300x_task_set_sample_rate(uint32_t rate)
+{
+	OS_MUTEX_GET(sample_rate_mutex, OS_MUTEX_FOREVER);
+	sample_rate_ms = rate;
+	OS_MUTEX_PUT(sample_rate_mutex);
 }
 
 /**
@@ -209,8 +233,10 @@ void hs300x_task_setup_hardware()
     ad_i2c_io_config(hs300x_i2c_config->id,
                      hs300x_i2c_config->io, AD_IO_CONF_ON);
 
-    hw_gpio_configure_pin_power(HS300x_POWER_GPIO_PORT,  HS300x_POWER_GPIO_PIN, HW_GPIO_POWER_V33);
+    hw_gpio_configure_pin_power(HS300x_POWER_GPIO_PORT, HS300x_POWER_GPIO_PIN, HW_GPIO_POWER_V33);
     hw_gpio_configure(hs300x_handle.power_enable);
+    hw_gpio_pad_latch_enable(HS300x_POWER_GPIO_PORT,HS300x_POWER_GPIO_PIN);
+
     hw_sys_pd_com_disable();
 }
 
@@ -231,9 +257,9 @@ static hs300x_error_t perform_measurement(hs300x_data_t *sample)
  */
 static void process_measurement(hs300x_data_t sample)
 {
-    printf("Sample Rate (ms): %d, Humidity (%%RH): %.3f, Temp (C): %.3f\r\n", hs300x_task_get_sample_rate(), sample.humidity_rh_pct, sample.temp_deg_c);
+    printf("Sample Rate (ms): %ld, Humidity (%%RH): %.3f, Temp (C): %.3f\r\n", hs300x_task_get_sample_rate(), sample.humidity_rh_pct, sample.temp_deg_c);
 
-    OS_QUEUE_PUT(sample_q, &sample, 0);
-    OS_TASK_NOTIFY(measurement_notification_task, HS3001_MEASUREMENT_NTF, OS_NOTIFY_SET_BITS);
-
+    OS_QUEUE_PUT(sample_q, &sample, OS_QUEUE_NO_WAIT);
+    if(measurement_notification_task)
+    	OS_TASK_NOTIFY(measurement_notification_task, HS3001_MEASUREMENT_NTF, OS_NOTIFY_SET_BITS);
 }

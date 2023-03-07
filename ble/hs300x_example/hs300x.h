@@ -9,25 +9,6 @@
 #define HS300x_H_
 
 /***********************************************************************************************************************
-* DISCLAIMER
-* This software is supplied by Renesas Electronics Corporation and is only intended for use with Renesas products. No
-* other uses are authorized. This software is owned by Renesas Electronics Corporation and is protected under all
-* applicable laws, including copyright laws.
-* THIS SOFTWARE IS PROVIDED "AS IS" AND RENESAS MAKES NO WARRANTIES REGARDING
-* THIS SOFTWARE, WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. ALL SUCH WARRANTIES ARE EXPRESSLY DISCLAIMED. TO THE MAXIMUM
-* EXTENT PERMITTED NOT PROHIBITED BY LAW, NEITHER RENESAS ELECTRONICS CORPORATION NOR ANY OF ITS AFFILIATED COMPANIES
-* SHALL BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES FOR ANY REASON RELATED TO THIS
-* SOFTWARE, EVEN IF RENESAS OR ITS AFFILIATES HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
-* Renesas reserves the right, without notice, to make changes to this software and to discontinue the availability of
-* this software. By using this software, you agree to the additional terms and conditions found by accessing the
-* following link:
-* http://www.renesas.com/disclaimer
-*
-* Copyright (C) 2021 Renesas Electronics Corporation. All rights reserved.
-***********************************************************************************************************************/
-
-/***********************************************************************************************************************
  * Includes
  **********************************************************************************************************************/
 #include <stdint.h>
@@ -51,7 +32,6 @@
 #define HS300x_DATA_STATUS_STALE                  (0x01)
 
 /* Definitions for Calculation */
-//#define RM_HS300x_CALC_STATIC_VALUE                  (16383.0F)
 #define HS300x_CALC_14BIT_MAX                     (((1 << 14) - 1))
 #define HS300x_CALC_HUMD_VALUE_100                (100.0F)
 #define HS300x_CALC_TEMP_C_VALUE_165              (165.0F)
@@ -122,7 +102,7 @@ typedef struct
 } hs300x_handle_t;
 
 /*
- * This driver makes use of the I2C adapter.
+ * Error codes. This driver makes use of the I2C adapter and I2C driver. The error codes below map I2C errors to hs300x errors
  */
 typedef enum
 {
@@ -145,6 +125,7 @@ typedef enum
     HS300x_ERROR_I2C_ABORT_SLAVE_ARBITRATION_LOST = HW_I2C_ABORT_SLAVE_ARBITRATION_LOST,     /**< (slave mode) bus lost when transmitting to master */
     HS300x_ERROR_I2C_ABORT_SLAVE_IN_TX = HW_I2C_ABORT_SLAVE_IN_TX,                           /**< (slave mode) request for data replied with read request */
     HS300x_ERROR_I2C_ABORT_SW_ERROR = HW_I2C_ABORT_SW_ERROR,
+	HS300x_ERROR_DATA_ACCESS_FAIL,
 } hs300x_error_t;
 
 void hs300x_close(hs300x_handle_t* hs300x_handle);

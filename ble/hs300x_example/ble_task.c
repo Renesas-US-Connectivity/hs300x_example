@@ -12,28 +12,22 @@
 #include "ble_common.h"
 #include "ble_gap.h"
 #include "ble_gatts.h"
-#include "ble_l2cap.h"
-#include "sdk_list.h"
-#include "bas.h"
-#include "ias.h"
-#include "lls.h"
-#include "tps.h"
 
 #include "ble_task.h"
 #include "sensor_service.h"
 #include "hs300x_task.h"
 
-/*
- * The maximum length of name in adv_packet
- */
-uint8_t device_name[] = "YourName_HS3001Demo";
-__RETAINED_RW static OS_QUEUE sample_q = NULL;
-__RETAINED_RW static bool connected = false;
-__RETAINED_RW static ble_service_t *sensor_service_handle;
-
+/* Private function prototypes */
 static void get_sample_rate(ble_service_t *svc, uint16_t conn_idx);
 static void get_sensor_id(ble_service_t *svc, uint16_t conn_idx);
+static void handle_evt_gap_adv_completed(ble_evt_gap_adv_completed_t *evt);
+static void handle_evt_gap_connected(ble_evt_gap_connected_t *evt);
+static void handle_evt_gap_disconnected(ble_evt_gap_disconnected_t *evt);
+static void handle_evt_gap_pair_req(ble_evt_gap_pair_req_t *evt);
 static void set_sample_rate(ble_service_t *svc, uint16_t conn_idx, const uint32_t new_rate);
+
+/* Private variables */
+char device_name[] = "YourName_HS3001Demo";
 
 static const sensor_service_cb_t sensor_service_callbacks =
 {
@@ -42,82 +36,23 @@ static const sensor_service_cb_t sensor_service_callbacks =
 	.set_sample_rate_cb = set_sample_rate,
 };
 
-static void get_sample_rate(ble_service_t *svc, uint16_t conn_idx)
-{
-	printf("get_sample_Rate\r\n");
-	uint32_t sample_rate_ms = hs300x_task_get_sample_rate();
-	sensor_service_get_sample_rate_cfm(svc, conn_idx, ATT_ERROR_OK, &sample_rate_ms);
-}
-
-static void get_sensor_id(ble_service_t *svc, uint16_t conn_idx)
-{
-	printf("get_sensor_id\r\n");
-	uint32_t id = hs300x_task_get_sensor_id();
-	sensor_service_get_sensor_id_cfm(svc, conn_idx, ATT_ERROR_OK, &id);
-}
-
-static void set_sample_rate(ble_service_t *svc, uint16_t conn_idx, const uint32_t new_rate)
-{
-	printf("set_sample_rate\r\n");
-
-	hs300x_task_set_sample_rate(new_rate);
-	sensor_service_set_sample_rate_cfm(svc, conn_idx, ATT_ERROR_OK);
-}
-
-/*
- * PXP advertising and scan response data
- *
- * While not required, the PXP specification states that a PX reporter device using the peripheral
- * role can advertise support for LLS. Device name is set in scan response to make it easily
- * recognizable.
- */
 static const gap_adv_ad_struct_t adv_data[] = {
 
 	GAP_ADV_AD_STRUCT(GAP_DATA_TYPE_LOCAL_NAME, sizeof(device_name), device_name)
 };
 
-static void handle_evt_gap_connected(ble_evt_gap_connected_t *evt)
-{
-	/**
-	 * Manage behavior upon connection
-	 */
-	connected = true;
-
-}
-
-static void handle_evt_gap_disconnected(ble_evt_gap_disconnected_t *evt)
-{
-	 /**
-	 * Manage behavior upon disconnection
-	 */
-	connected = false;
-
-	// Restart advertising
-	ble_gap_adv_start(GAP_CONN_MODE_UNDIRECTED);
-}
-
-static void handle_evt_gap_pair_req(ble_evt_gap_pair_req_t *evt)
-{
-	ble_gap_pair_reply(evt->conn_idx, true, evt->bond);
-}
-
-static void handle_evt_gap_adv_completed(ble_evt_gap_adv_completed_t *evt)
-{
-	/*
-	 * If advertising is completed, just restart it. It's either because a new client connected
-	 * or it was cancelled in order to change the interval values.
-	 */
-	ble_gap_adv_start(GAP_CONN_MODE_UNDIRECTED);
-}
-
+/**
+ * \brief BLE task. This task handles BLE communication for the application
+ *
+ * \param[in] pvParameters      Used to pass in a queue holding measurements from the sensor
+ *
+ * \return void
+ */
 void ble_task(void *pvParameters)
 {
-	sample_q = (OS_QUEUE)pvParameters;
+	OS_QUEUE sample_q = (OS_QUEUE)pvParameters;
 
-	hs300x_event_queue_register(OS_GET_CURRENT_TASK());
-
-	uint16_t name_len;
-	uint8_t name_buf[BLE_ADV_DATA_LEN_MAX + 1];        /* 1 byte for '\0' character */
+	hs300x_task_event_queue_register(OS_GET_CURRENT_TASK());
 
 	/*************************************************************************************************\
 	 * Initialize BLE
@@ -128,18 +63,14 @@ void ble_task(void *pvParameters)
 	/* Register task to BLE framework to receive BLE event notifications */
 	ble_register_app();
 
-	/* Get device name from NVPARAM if valid or use default otherwise */
-	name_len = sizeof(device_name);
-	strcpy(name_buf, device_name);
-
 	/* Set device name */
-	ble_gap_device_name_set(name_buf, ATT_PERM_READ);
+	ble_gap_device_name_set(device_name, ATT_PERM_READ);
 
 	/*************************************************************************************************\
 	 * Initialize BLE services
 	 */
 	/* Add custom sensor service */
-	sensor_service_handle = sensor_service_init(&sensor_service_callbacks);
+	ble_service_t* sensor_service_handle = sensor_service_init(&sensor_service_callbacks);
 
 	/*************************************************************************************************\
 	 * Start advertising
@@ -154,7 +85,6 @@ void ble_task(void *pvParameters)
 
 	for (;;)
 	{
-		//OS_BASE_TYPE ret __UNUSED;
 		uint32_t notif;
 
 		/*
@@ -166,7 +96,7 @@ void ble_task(void *pvParameters)
 		 */
 		OS_ASSERT(ret == OS_OK);
 
-		/* Notified from BLE manager? */
+		/* Notified from BLE manager */
 		if (notif & BLE_APP_NOTIFY_MASK)
 		{
 			ble_evt_hdr_t *hdr;
@@ -216,16 +146,120 @@ void ble_task(void *pvParameters)
 			}
 		}
 
+		/* Notified HS3001 Task */
 		if (notif & HS3001_MEASUREMENT_NTF)
 		{
-			hs300x_data_t sample = {0};
-			OS_BASE_TYPE q_status = OS_QUEUE_GET(sample_q, &sample, OS_QUEUE_NO_WAIT);
-
-			if(q_status == OS_QUEUE_OK)
+			// Process all items on the measurement queue
+			OS_BASE_TYPE q_status = OS_QUEUE_OK;
+			while (q_status != OS_QUEUE_EMPTY)
 			{
-				sensor_service_notify_measurement_to_all_connected(sensor_service_handle, &sample);
+				// Get a measurement from the queue
+				hs300x_data_t sample = {0};
+				q_status = OS_QUEUE_GET(sample_q, &sample, OS_QUEUE_NO_WAIT);
+
+				// if a measurement is available, notify all connected clients
+				if(q_status == OS_QUEUE_OK)
+				{
+					sensor_service_notify_measurement_to_all_connected((ble_service_t*)sensor_service_handle, &sample);
+				}
 			}
 		}
 	}
 }
 
+/**
+ * \brief Callback to handle Sample Rate read requests
+ *
+ * \param[in] svc      			service handle
+ * \param[in] conn_idx      	connection index associated with the client making the request
+ *
+ * \return void
+ */
+static void get_sample_rate(ble_service_t *svc, uint16_t conn_idx)
+{
+	uint32_t sample_rate_ms = hs300x_task_get_sample_rate();
+	sensor_service_get_sample_rate_cfm(svc, conn_idx, ATT_ERROR_OK, &sample_rate_ms);
+}
+
+/**
+ * \brief Callback to handle Sensor ID read requests
+ *
+ * \param[in] svc      			service handle
+ * \param[in] conn_idx      	connection index associated with the client making the request
+ *
+ * \return void
+ */
+static void get_sensor_id(ble_service_t *svc, uint16_t conn_idx)
+{
+	uint32_t id = hs300x_task_get_sensor_id();
+	sensor_service_get_sensor_id_cfm(svc, conn_idx, ATT_ERROR_OK, &id);
+}
+
+/**
+ * \brief Handler for advertising completed event
+ *
+ * \param[in] evt      			pointer to the advertising completed event
+ *
+ * \return void
+ */
+static void handle_evt_gap_adv_completed(ble_evt_gap_adv_completed_t *evt)
+{
+	/*
+	 * If advertising is completed, just restart it. It's either because a new client connected
+	 * or it was cancelled in order to change the interval values.
+	 */
+	ble_gap_adv_start(GAP_CONN_MODE_UNDIRECTED);
+}
+
+/**
+ * \brief Handler for connected event
+ *
+ * \param[in] evt      			pointer to the connected event
+ *
+ * \return void
+ */
+static void handle_evt_gap_connected(ble_evt_gap_connected_t *evt)
+{
+	// Manage behavior upon connection
+}
+
+/**
+ * \brief Handler for disconnected event
+ *
+ * \param[in] evt      			pointer to the disconnected event
+ *
+ * \return void
+ */
+static void handle_evt_gap_disconnected(ble_evt_gap_disconnected_t *evt)
+{
+
+	// Manage behavior upon disconnection
+
+	// Restart advertising
+	ble_gap_adv_start(GAP_CONN_MODE_UNDIRECTED);
+}
+
+/**
+ * \brief Handler for pairing request event
+ *
+ * \param[in] evt      			pointer to the pairing request event
+ *
+ * \return void
+ */
+static void handle_evt_gap_pair_req(ble_evt_gap_pair_req_t *evt)
+{
+	ble_gap_pair_reply(evt->conn_idx, true, evt->bond);
+}
+
+/**
+ * \brief Callback to handle Sample Rate write requests
+ *
+ * \param[in] evt      			pointer to the advertising completed event
+ *
+ * \return void
+ */
+static void set_sample_rate(ble_service_t *svc, uint16_t conn_idx, const uint32_t new_rate)
+{
+	hs300x_task_set_sample_rate(new_rate);
+	sensor_service_set_sample_rate_cfm(svc, conn_idx, ATT_ERROR_OK);
+}

@@ -6,6 +6,7 @@
  */
 #include "hs300x.h"
 
+/* Private function prototypes */
 static float calc_measurement_time(hs300x_resolution_t humidity_res, hs300x_resolution_t temp_res);
 static void convert_raw_to_humid_temp(uint8_t *raw_data, bool data_includes_temp, hs300x_data_t *calculated_data);
 static float measurement_time_from_resolution(hs300x_resolution_t res);
@@ -47,6 +48,24 @@ static void convert_raw_to_humid_temp(uint8_t *raw_data, bool data_includes_temp
         float temp = ((raw_data[2] << 8) | (raw_data[3] & HS300x_MASK_TEMPERATURE_LOWER_0XFC)) >> 2;
         calculated_data->temp_deg_c = (temp * HS300x_CALC_TEMP_C_VALUE_165)/(HS300x_CALC_14BIT_MAX) - HS300x_CALC_TEMP_C_VALUE_40;
     }
+}
+
+/**
+ * \brief Extract the port/pin from a gpio_config
+ *
+ * \param[in] config        gpio_config to extract information from
+ * \param[out] port         pointer where port information will be placed
+ * \param[out] pin        	pointer where pin information will be placed
+ *
+ * \return void
+ *
+ * \sa ad_i2c_close()
+ *
+ */
+static void gpio_config_to_port_and_pin(gpio_config config, HW_GPIO_PORT *port, HW_GPIO_PIN *pin)
+{
+	*port = (config.pin & 0x3F) >> HW_GPIO_PIN_BITS;
+	*pin = (config.pin) & ((1 << HW_GPIO_PIN_BITS) - 1);
 }
 
 /**
@@ -144,8 +163,6 @@ hs300x_error_t hs300x_get_measurement(hs300x_handle_t* hs300x_handle, bool data_
  */
 hs300x_error_t hs300x_get_resolution(hs300x_handle_t* hs300x_handle, hs300x_resolution_type_t type, hs300x_resolution_t *resolution) // TODO do not need separate resolution. Just update the handle
 {
-    // use power cycle to reset device and put into programming mode
-
     const uint8_t *cmd = type == HS300x_RESOLUTION_TYPE_HUMIDITY ? read_humidity_resolution_cmd : read_temp_resolution_cmd;
     hs300x_error_t error = hs300x_write(hs300x_handle, cmd, sizeof(read_humidity_resolution_cmd));
     // cmd takes 120us to process
@@ -164,8 +181,7 @@ hs300x_error_t hs300x_get_resolution(hs300x_handle_t* hs300x_handle, hs300x_reso
             }
             else
             {
-                // TODO: error code
-                ASSERT_ERROR(0);
+            	error = HS300x_ERROR_DATA_ACCESS_FAIL;
             }
         }
     }
@@ -209,10 +225,16 @@ hs300x_error_t hs300x_get_sensor_id(hs300x_handle_t *hs300x_handle, uint32_t* id
                 {
                     *id = (upper_rsp[1] << 24) | (upper_rsp[2] << 16) | (lower_rsp[1] << 8) | lower_rsp[2];
                 }
-                // NEED ERROR if lower_rsp[0] != hs300x_PROGRAMMING_MODE_SUCCESS_STATUS
+                else if (error == HS300x_ERROR_NONE)
+			    {
+                	error = HS300x_ERROR_DATA_ACCESS_FAIL;
+			    }
             }
         }
-        // NEED ERROR if upper_rsp[0] != hs300x_PROGRAMMING_MODE_SUCCESS_STATUS
+        else if (error == HS300x_ERROR_NONE)
+        {
+        	 error = HS300x_ERROR_DATA_ACCESS_FAIL;
+        }
     }
 
     return error;
@@ -250,8 +272,10 @@ ad_i2c_handle_t hs300x_open(const ad_i2c_controller_conf_t *i2c_conf)
  */
 void hs300x_power_cycle_sensor(gpio_config power_enable)
 {
-    HW_GPIO_PORT port = (power_enable.pin & 0x3F) >> HW_GPIO_PIN_BITS;
-    HW_GPIO_PIN pin = (power_enable.pin) & ((1 << HW_GPIO_PIN_BITS) - 1);
+	// Get the port,pin for the power_enable pin
+    HW_GPIO_PORT port;
+    HW_GPIO_PIN pin;
+    gpio_config_to_port_and_pin(power_enable, &port, &pin);
 
     hw_gpio_set_inactive(port, pin);
 
@@ -307,12 +331,14 @@ hs300x_error_t hs300x_set_resolution(hs300x_handle_t* hs300x_handle, hs300x_reso
         {
             if(response[0] == HS300x_PROGRAMMING_MODE_SUCCESS_STATUS)
             {
+            	// The measurement resolution is stored in bits [11:10]. See datasheet section 6.9 Setting the Measurement Resolution, step 3.
+            	// note response[1] is the MSB of the register
                 response[1] &= ~(0x0C); // clear bits 11,10
                 response[1] |= (resolution << 2); // set bits 11,10
                 uint8_t res_type = type == HS300x_RESOLUTION_TYPE_HUMIDITY ? HS300x_REGISTER_HUMIDITY_RESOLUTION_WRITE : HS300x_REGISTER_TEMPERATURE_RESOLUTION_WRITE;
                 uint8_t new_resolution_cmd[] = {res_type, response[1] , response[2]};
                 error = hs300x_write(hs300x_handle, new_resolution_cmd, sizeof(new_resolution_cmd));
-                // update takes 14ms, see section 6.9
+                // update takes 14ms, see datasheet section 6.9
                 OS_DELAY_MS(HS300x_DELAY_14_ms);
 
                 if(error == HS300x_ERROR_NONE)
@@ -323,7 +349,7 @@ hs300x_error_t hs300x_set_resolution(hs300x_handle_t* hs300x_handle, hs300x_reso
             }
             else
             {
-                ASSERT_ERROR(0);
+				error = HS300x_ERROR_DATA_ACCESS_FAIL;
             }
         }
     }
