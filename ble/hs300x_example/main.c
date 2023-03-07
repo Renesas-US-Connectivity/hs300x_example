@@ -23,11 +23,14 @@
 #include "sys_power_mgr.h"
 #include "sys_watchdog.h"
 #include "hs300x_task.h"
+#include "hs300x.h"
 #include "ble_task.h"
 
 /* Task priorities */
 #define mainBLE_TASK_PRIORITY              ( OS_TASK_PRIORITY_NORMAL )
 #define mainHS3001_TASK_PRIORITY           ( OS_TASK_PRIORITY_NORMAL )
+
+__RETAINED static OS_QUEUE sample_q = NULL;
 
 #if dg_configUSE_WDOG
 INITIALISED_PRIVILEGED_DATA int8_t idle_task_wdog_id = -1;
@@ -101,11 +104,13 @@ static void system_init( void *pvParameters )
         /* Initialize BLE Manager */
         ble_mgr_init();
 
+        OS_QUEUE_CREATE(sample_q, sizeof(hs300x_data_t), 5);
+
         /* Start the BLE Peripheral application task. */
         OS_TASK_CREATE("Ble Task",                /* The text name assigned to the task, for
                                                            debug only; not used by the kernel. */
                        ble_task,             /* The function that implements the task. */
-                       NULL,                            /* The parameter passed to the task. */
+					   sample_q,                            /* The parameter passed to the task. */
                        4096,                            /* The number of bytes to allocate to the
                                                            stack of the task. */
 					   mainBLE_TASK_PRIORITY,/* The priority assigned to the task. */
@@ -117,7 +122,7 @@ static void system_init( void *pvParameters )
         OS_TASK_CREATE("HS300x Sample Task",                /* The text name assigned to the task, for
                                                            debug only; not used by the kernel. */
                        hs300x_task,             /* The function that implements the task. */
-                       NULL,                            /* The parameter passed to the task. */
+					   sample_q,                            /* The parameter passed to the task. */
                        4096,                            /* The number of bytes to allocate to the
                                                            stack of the task. */
 					   mainHS3001_TASK_PRIORITY,/* The priority assigned to the task. */

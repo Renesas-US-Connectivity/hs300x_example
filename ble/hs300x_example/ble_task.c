@@ -27,6 +27,9 @@
  * The maximum length of name in adv_packet
  */
 uint8_t device_name[] = "YourName_HS3001Demo";
+__RETAINED_RW static OS_QUEUE sample_q = NULL;
+__RETAINED_RW static bool connected = false;
+__RETAINED_RW static ble_service_t *sensor_service_handle;
 
 static void get_sample_rate(ble_service_t *svc, uint16_t conn_idx);
 static void get_sensor_id(ble_service_t *svc, uint16_t conn_idx);
@@ -78,7 +81,7 @@ static void handle_evt_gap_connected(ble_evt_gap_connected_t *evt)
 	/**
 	 * Manage behavior upon connection
 	 */
-	printf("Connected to central\r\n");
+	connected = true;
 
 }
 
@@ -87,7 +90,7 @@ static void handle_evt_gap_disconnected(ble_evt_gap_disconnected_t *evt)
 	 /**
 	 * Manage behavior upon disconnection
 	 */
-	printf("Disconnected from central\r\n");
+	connected = false;
 
 	// Restart advertising
 	ble_gap_adv_start(GAP_CONN_MODE_UNDIRECTED);
@@ -95,7 +98,7 @@ static void handle_evt_gap_disconnected(ble_evt_gap_disconnected_t *evt)
 
 static void handle_evt_gap_pair_req(ble_evt_gap_pair_req_t *evt)
 {
-        ble_gap_pair_reply(evt->conn_idx, true, evt->bond);
+	ble_gap_pair_reply(evt->conn_idx, true, evt->bond);
 }
 
 static void handle_evt_gap_adv_completed(ble_evt_gap_adv_completed_t *evt)
@@ -107,8 +110,12 @@ static void handle_evt_gap_adv_completed(ble_evt_gap_adv_completed_t *evt)
 	ble_gap_adv_start(GAP_CONN_MODE_UNDIRECTED);
 }
 
-void ble_task(void *params)
+void ble_task(void *pvParameters)
 {
+	sample_q = (OS_QUEUE)pvParameters;
+
+	hs300x_event_queue_register(OS_GET_CURRENT_TASK());
+
 	uint16_t name_len;
 	uint8_t name_buf[BLE_ADV_DATA_LEN_MAX + 1];        /* 1 byte for '\0' character */
 
@@ -132,7 +139,7 @@ void ble_task(void *params)
 	 * Initialize BLE services
 	 */
 	/* Add custom sensor service */
-	sensor_service_init(&sensor_service_callbacks);
+	sensor_service_handle = sensor_service_init(&sensor_service_callbacks);
 
 	/*************************************************************************************************\
 	 * Start advertising
@@ -206,6 +213,17 @@ void ble_task(void *params)
 			 */
 			if (ble_has_event()) {
 				OS_TASK_NOTIFY(OS_GET_CURRENT_TASK(), BLE_APP_NOTIFY_MASK, OS_NOTIFY_SET_BITS);
+			}
+		}
+
+		if (notif & HS3001_MEASUREMENT_NTF)
+		{
+			hs300x_data_t sample = {0};
+			OS_BASE_TYPE q_status = OS_QUEUE_GET(sample_q, &sample, OS_QUEUE_NO_WAIT);
+
+			if(q_status == OS_QUEUE_OK)
+			{
+				sensor_service_notify_measurement_to_all_connected(sensor_service_handle, &sample);
 			}
 		}
 	}

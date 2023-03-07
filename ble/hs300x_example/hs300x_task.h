@@ -14,6 +14,14 @@
 #include <osal.h>
 #include "hs300x.h"
 
+/*
+ * Notification bits reservation
+ *
+ * Bit #0 is always assigned to BLE event queue notification.
+ */
+#define HS3001_MEASUREMENT_NTF       (1 << 1)
+
+void hs300x_event_queue_register(const OS_TASK task_handle);
 void hs300x_task(void *pvParameters);
 uint32_t hs300x_task_get_sensor_id();
 uint32_t hs300x_task_get_sample_rate();

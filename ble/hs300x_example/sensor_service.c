@@ -338,7 +338,7 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
 	ble_error_t error = ble_gatts_add_characteristic(&uuid,
 								 GATT_PROP_NOTIFY,
 								 ATT_PERM_NONE,
-								 1,
+								 sizeof(hs300x_data_t),
 								 0,
 								 NULL,
 								 &sensor_service_handle->measurement_value_h);
@@ -424,7 +424,7 @@ void sensor_service_get_sensor_id_cfm(ble_service_t *svc, uint16_t conn_idx, att
 
 
 /* Notify the peer device that characteristic attribute value has been updated */
-void sensor_service_notify_measurement(ble_service_t *svc, uint16_t conn_idx, const uint32_t *value)
+void sensor_service_notify_measurement(ble_service_t *svc, uint16_t conn_idx, const hs300x_data_t *value)
 {
 	sensor_service_t *sensor_service_handle = (sensor_service_t *) svc;
 
@@ -438,7 +438,7 @@ void sensor_service_notify_measurement(ble_service_t *svc, uint16_t conn_idx, co
 	 */
 	if (ccc & GATT_CCC_NOTIFICATIONS)
 	{
-		ble_gatts_send_event(conn_idx, sensor_service_handle->measurement_value_h, GATT_EVENT_NOTIFICATION, sizeof(uint32_t), (uint8_t *)value);
+		ble_gatts_send_event(conn_idx, sensor_service_handle->measurement_value_h, GATT_EVENT_NOTIFICATION, sizeof(hs300x_data_t), (uint8_t *)value);
 	}
 }
 
@@ -446,7 +446,7 @@ void sensor_service_notify_measurement(ble_service_t *svc, uint16_t conn_idx, co
  * Notify all the connected peer devices that characteristic attribute value
  * has been updated
  */
-void sensor_service_notify_measurement_to_all_connected(ble_service_t *svc, const uint32_t *value)
+void sensor_service_notify_measurement_to_all_connected(ble_service_t *svc, const hs300x_data_t *value)
 {
 	uint8_t num_conn;
 	uint16_t *conn_idx_array;

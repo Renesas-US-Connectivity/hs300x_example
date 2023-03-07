@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 #include <ble_service.h>
-
+#include "hs300x.h"
 
 /* User-defined callback functions */
 typedef void (* sensor_svc_get_sample_rate_cb_t) (ble_service_t *svc, uint16_t conn_idx);
@@ -35,8 +35,8 @@ typedef struct {
 ble_service_t *sensor_service_init(const sensor_service_cb_t *cb);
 void sensor_service_get_sample_rate_cfm(ble_service_t *svc, uint16_t conn_idx, att_error_t status, const uint32_t *value);
 void sensor_service_get_sensor_id_cfm(ble_service_t *svc, uint16_t conn_idx, att_error_t status, const uint32_t *value);
-void sensor_service_notify_measurement(ble_service_t *svc, uint16_t conn_idx, const uint32_t *value);
-void sensor_service_notify_measurement_to_all_connected(ble_service_t *svc, const uint32_t *value);
+void sensor_service_notify_measurement(ble_service_t *svc, uint16_t conn_idx, const hs300x_data_t *value);
+void sensor_service_notify_measurement_to_all_connected(ble_service_t *svc, const hs300x_data_t *value);
 void sensor_service_set_sample_rate_cfm(ble_service_t *svc, uint16_t conn_idx, att_error_t status);
 
 #endif /* SENSOR_SERVICE_H_ */
