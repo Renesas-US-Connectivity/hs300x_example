@@ -34,8 +34,8 @@ __RETAINED_RW static OS_QUEUE sample_q = NULL;
 __RETAINED_RW static OS_TASK measurement_notification_task = NULL;
 
 // See hs300x_resolution_t for resolution options
-hs300x_resolution_t user_humidity_resolution = HS300x_RESOLUTION_10_BITS;
-hs300x_resolution_t user_temperature_resolution = HS300x_RESOLUTION_10_BITS;
+hs300x_resolution_t user_humidity_resolution = HS300x_RESOLUTION_14_BITS;
+hs300x_resolution_t user_temperature_resolution = HS300x_RESOLUTION_14_BITS;
 
 /**
  * \brief Initialize hs300x_handle
