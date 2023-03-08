@@ -193,16 +193,6 @@ uint32_t hs300x_task_get_sensor_id()
 }
 
 /**
- * \brief Reconfigure the power GPIO on wake
- *
- * \return void
- */
-void hs300x_task_reconfig_gpio_on_wake()
-{
-    //hw_gpio_configure(hs300x_handle.power_enable);
-}
-
-/**
  * \brief Set the sample rate for taking a measurement
  *
  * \param[in] rate       new sample rate in milliseconds

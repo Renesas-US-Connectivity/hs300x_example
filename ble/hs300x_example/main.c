@@ -171,7 +171,7 @@ int main( void )
  */
 static void periph_init(void)
 {
-        hs300x_task_reconfig_gpio_on_wake();
+
 }
 
 /**
