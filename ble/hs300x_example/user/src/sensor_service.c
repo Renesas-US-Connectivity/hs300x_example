@@ -21,21 +21,21 @@
 
 /* Custom sensor service  structure*/
 typedef struct {
-	ble_service_t svc;
+        ble_service_t svc;
 
-	// User-defined callback functions
-	const sensor_service_cb_t *cb;
+        // User-defined callback functions
+        const sensor_service_cb_t *cb;
 
-	// Attribute handles of BLE service
-	uint16_t sensor_id_value_h;	                // Sensor ID Value
-	uint16_t sensor_id_user_desc_h;			// Sensor ID User Description
+        // Attribute handles of BLE service
+        uint16_t sensor_id_value_h;		        // Sensor ID Value
+        uint16_t sensor_id_user_desc_h;			// Sensor ID User Description
 
-	uint16_t sample_rate_value_h;			// Sample Rate Value
-	uint16_t sample_rate_user_desc_h;		// Sample Rate User Description
+        uint16_t sample_rate_value_h;			// Sample Rate Value
+        uint16_t sample_rate_user_desc_h;		// Sample Rate User Description
 
-	uint16_t measurement_value_h;			// Measurement Value
-	uint16_t measurement_value_user_desc_h;         // Measurement Value User Description
-	uint16_t measurement_value_ccc_h;		// Measurement Value Client Characteristic Configuration Descriptor. Used for notifications
+        uint16_t measurement_value_h;			// Measurement Value
+        uint16_t measurement_user_desc_h;	        // Measurement Value User Description
+        uint16_t measurement_ccc_h;		        // Measurement Value Client Characteristic Configuration Descriptor. Used for notifications
 
 } sensor_service_t;
 
@@ -71,7 +71,7 @@ static void cleanup(ble_service_t *svc)
 {
 	sensor_service_t *sensor_service_handle = (sensor_service_t *) svc;
 
-	ble_storage_remove_all(sensor_service_handle->measurement_value_ccc_h);
+	ble_storage_remove_all(sensor_service_handle->measurement_ccc_h);
 
 	OS_FREE(sensor_service_handle);
 }
@@ -89,7 +89,7 @@ static void handle_measurement_ccc_read(sensor_service_t *sensor_service_handle,
 	uint16_t ccc = 0x0000;
 
 	// Extract the CCC value from the ble storage
-	ble_storage_get_u16(evt->conn_idx, sensor_service_handle->measurement_value_ccc_h, &ccc);
+	ble_storage_get_u16(evt->conn_idx, sensor_service_handle->measurement_ccc_h, &ccc);
 
 	// Send a read confirmation with the value from storage
 	ble_gatts_read_cfm(evt->conn_idx, evt->handle, ATT_ERROR_OK, sizeof(ccc), &ccc);
@@ -99,7 +99,7 @@ static void handle_measurement_ccc_read(sensor_service_t *sensor_service_handle,
  * \brief This function is called when their is a write request for the Measurement Value Characteristic CCC
  *
  * \param[in] sensor_service_handle         pointer sensor service handle
- * \param[in] evt          		    pointer to the write request
+ * \param[in] evt          	            pointer to the write request
  *
  * \return att_error_t indicating the status of the request.
  */
@@ -121,10 +121,10 @@ static att_error_t handle_measurement_ccc_write(sensor_service_t *sample_service
 		uint16_t ccc = get_u16(evt->value);
 
 		// Store the CCC value to ble storage
-		ble_storage_put_u32(evt->conn_idx, sample_service_handle->measurement_value_ccc_h, ccc, true);
+		ble_storage_put_u32(evt->conn_idx, sample_service_handle->measurement_ccc_h, ccc, true);
 
 		// Respond to the write requst
-		ble_gatts_write_cfm(evt->conn_idx, sample_service_handle->measurement_value_ccc_h, error);
+		ble_gatts_write_cfm(evt->conn_idx, sample_service_handle->measurement_ccc_h, error);
 	}
 
 	return error;
@@ -134,7 +134,7 @@ static att_error_t handle_measurement_ccc_write(sensor_service_t *sample_service
  * \brief This function is called when their is a read request for an attribute in our custom sensor service
  *
  * \param[in] sensor_service_handle         pointer service handle
- * \param[in] evt          		    pointer to the read request
+ * \param[in] evt          	            pointer to the read request
  *
  * \return void
  */
@@ -155,7 +155,7 @@ static void handle_read_req(ble_service_t *svc, const ble_evt_gatts_read_req_t *
 	{
 		handle_sample_rate_read(sensor_service_handle, evt);
 	}
-	else if(evt->handle == sensor_service_handle->measurement_value_ccc_h )
+	else if(evt->handle == sensor_service_handle->measurement_ccc_h )
 	{
 		handle_measurement_ccc_read(sensor_service_handle, evt);
 	}
@@ -265,7 +265,7 @@ static void handle_sensor_id_read(sensor_service_t *sensor_service_handle, const
  * \brief This function is called when their is a write request for an attribute in our custom sensor service
  *
  * \param[in] sensor_service_handle         pointer service handle
- * \param[in] evt          		    pointer to the write request
+ * \param[in] evt          	            pointer to the write request
  *
  * \return void
  */
@@ -283,7 +283,7 @@ static void handle_write_req(ble_service_t *svc, const ble_evt_gatts_write_req_t
 	{
 		status = handle_sample_rate_write(sensor_service_handle, evt);
 	}
-	else if(evt->handle == sensor_service_handle->measurement_value_ccc_h)
+	else if(evt->handle == sensor_service_handle->measurement_ccc_h)
 	{
 		status = handle_measurement_ccc_write(sensor_service_handle, evt);
 	}
@@ -335,12 +335,12 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
 	// Characteristic declaration for Sensor ID
 	ble_uuid_from_string("11111111-2222-3333-4444-555555555555", &uuid);
 	ble_gatts_add_characteristic(&uuid,
-                                     GATT_PROP_READ,
-                                     ATT_PERM_READ,
-                                     SENSOR_ID_CHAR_SIZE,
-                                     GATTS_FLAG_CHAR_READ_REQ,
-                                     NULL,
-                                     &sensor_service_handle->sensor_id_value_h);
+	                             GATT_PROP_READ,
+	                             ATT_PERM_READ,
+	                             SENSOR_ID_CHAR_SIZE,
+	                             GATTS_FLAG_CHAR_READ_REQ,
+	                             NULL,
+	                             &sensor_service_handle->sensor_id_value_h);
 
 	// Define descriptor of type Characteristic User Description for Sensor ID
 	ble_uuid_create16(UUID_GATT_CHAR_USER_DESCRIPTION, &uuid);
@@ -371,12 +371,12 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
 	// Characteristic declaration for Measurement Value
 	ble_uuid_from_string("99999999-AAAA-BBBB-CCCC-DDDDDDDDDDDD", &uuid);
 	ble_gatts_add_characteristic(&uuid,
-                                     GATT_PROP_NOTIFY,
-                                     ATT_PERM_NONE,
-                                     MEASUREMENT_VALUE_CHAR_SIZE,
-                                     0,
-                                     NULL,
-                                     &sensor_service_handle->measurement_value_h);
+	                             GATT_PROP_NOTIFY,
+	                             ATT_PERM_NONE,
+	                             MEASUREMENT_VALUE_CHAR_SIZE,
+	                             0,
+	                             NULL,
+	                             &sensor_service_handle->measurement_value_h);
 
 	// Define descriptor of type Characteristic User Description for Measurement Value
 	ble_uuid_create16(UUID_GATT_CHAR_USER_DESCRIPTION, &uuid);
@@ -384,7 +384,7 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
                                  ATT_PERM_READ,
                                  sizeof(measurement_value_char_user_description)-1, // -1 to account for NULL char
                                  0,
-                                 &sensor_service_handle->measurement_value_user_desc_h);
+                                 &sensor_service_handle->measurement_user_desc_h);
 
 	// Define descriptor of type Cleint Characteristic Configuration Descriptor for Measurement Value
 	ble_uuid_create16(UUID_GATT_CLIENT_CHAR_CONFIGURATION, &uuid);
@@ -392,7 +392,7 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
                                  ATT_PERM_RW,
                                  2,
                                  0,
-                                 &sensor_service_handle->measurement_value_ccc_h);
+                                 &sensor_service_handle->measurement_ccc_h);
 
 	/*
 	 * Register all the attribute handles so that they can be updated
@@ -404,8 +404,8 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
                                    &sensor_service_handle->sample_rate_value_h,
                                    &sensor_service_handle->sample_rate_user_desc_h,
                                    &sensor_service_handle->measurement_value_h,
-                                   &sensor_service_handle->measurement_value_user_desc_h,
-                                   &sensor_service_handle->measurement_value_ccc_h,
+                                   &sensor_service_handle->measurement_user_desc_h,
+                                   &sensor_service_handle->measurement_ccc_h,
                                    0);
 
 	// Calculate the last attribute handle of the BLE service
@@ -416,13 +416,13 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
                             sizeof(sensor_id_char_user_description)-1,
                             sensor_id_char_user_description);
 
-	ble_gatts_set_value(sensor_service_handle->sample_rate_user_desc_h,
+        ble_gatts_set_value(sensor_service_handle->sample_rate_user_desc_h,
                             sizeof(sample_rate_char_user_description)-1,
                             sample_rate_char_user_description);
 
-	ble_gatts_set_value(sensor_service_handle->measurement_value_user_desc_h,
-                            sizeof(measurement_value_char_user_description)-1,
-                            measurement_value_char_user_description);
+	ble_gatts_set_value(sensor_service_handle->measurement_user_desc_h,
+	                    sizeof(measurement_value_char_user_description)-1,
+	                    measurement_value_char_user_description);
 
 	// Register the BLE service in BLE framework
 	ble_service_add(&sensor_service_handle->svc);
@@ -435,10 +435,10 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
 /**
  * \brief This function should be called by the application in response to Sample Rate read requests
  *
- * \param[in] svc           pointer to service handle
- * \param[in] conn_idx      connection index of the client to send confirmation to
- * \param[in] status        status of the request
- * \param[in] value         sample rate value to respond with
+ * \param[in] svc         	pointer to service handle
+ * \param[in] conn_idx          connection index of the client to send confirmation to
+ * \param[in] status            status of the request
+ * \param[in] value             sample rate value to respond with
  *
  * \return void
  */
@@ -452,10 +452,10 @@ void sensor_service_get_sample_rate_cfm(ble_service_t *svc, uint16_t conn_idx, a
 /**
  * \brief This function should be called by the application in response to Sensor ID read requests
  *
- * \param[in] svc           pointer to service handle
- * \param[in] conn_idx      connection index of the client to send confirmation to
- * \param[in] status        status of the request
- * \param[in] value         sensor ID value to respond with
+ * \param[in] svc         	pointer to service handle
+ * \param[in] conn_idx          connection index of the client to send confirmation to
+ * \param[in] status            status of the request
+ * \param[in] value             sensor ID value to respond with
  *
  * \return void
  */
@@ -470,9 +470,9 @@ void sensor_service_get_sensor_id_cfm(ble_service_t *svc, uint16_t conn_idx, att
 /**
  * \brief This function should be called by the application to notify a client of a new Measurement Value
  *
- * \param[in] svc           pointer to service handle
- * \param[in] conn_idx      connection index of the client to send notification to
- * \param[in] value         measurement value to notify client with
+ * \param[in] svc         	pointer to service handle
+ * \param[in] conn_idx          connection index of the client to send notification to
+ * \param[in] value             measurement value to notify client with
  *
  * \return void
  */
@@ -482,7 +482,7 @@ void sensor_service_notify_measurement(ble_service_t *svc, uint16_t conn_idx, co
 
 	uint16_t ccc = 0x0000;
 
-	ble_storage_get_u16(conn_idx, sensor_service_handle->measurement_value_ccc_h, &ccc);
+	ble_storage_get_u16(conn_idx, sensor_service_handle->measurement_ccc_h, &ccc);
 
 	/*
 	 * Check if the notifications are enabled from the peer device,
@@ -497,8 +497,8 @@ void sensor_service_notify_measurement(ble_service_t *svc, uint16_t conn_idx, co
 /**
  * \brief This function can be called by the application to notify all connected clients of a new Measurement Value
  *
- * \param[in] svc           pointer to service handle
- * \param[in] value         measurement value to notify client with
+ * \param[in] svc         	pointer to service handle
+ * \param[in] value             measurement value to notify client with
  *
  * \return void
  */

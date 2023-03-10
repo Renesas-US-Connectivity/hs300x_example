@@ -27,7 +27,8 @@ static void handle_evt_gap_pair_req(ble_evt_gap_pair_req_t *evt);
 static void set_sample_rate(ble_service_t *svc, uint16_t conn_idx, const uint32_t new_rate);
 
 /* Private variables */
-char device_name[] = "YourName_HS3001Demo";
+// Step 6.1 - Update the device name to something unique
+char device_name[] = "Patrick_HS3001Demo";
 
 static const sensor_service_cb_t sensor_service_callbacks =
 {
@@ -58,13 +59,17 @@ void ble_task(void *pvParameters)
 	 * Initialize BLE
 	 */
 	/* Start BLE device as peripheral */
+	// Step 6.2 add the appropriate API to start BLE as a peripheral
 	ble_peripheral_start();
 
 	/* Register task to BLE framework to receive BLE event notifications */
+	// Step 6.4 add the appropriate API to register the application to receive BLE event notifications
 	ble_register_app();
 
 	/* Set device name */
-	ble_gap_device_name_set(device_name, ATT_PERM_READ);
+	// Step 6.6 add the appropriate API to set the GAP device name.
+	// Note you should use the device_name variable above
+        ble_gap_device_name_set(device_name, ATT_PERM_READ);
 
 	/* Set a random address*/
 	own_address_t random_addr = {PRIVATE_RANDOM_RESOLVABLE_ADDRESS};
@@ -85,7 +90,9 @@ void ble_task(void *pvParameters)
 	 * switch to "reduced power" interval afterwards.
 	 */
 	ble_gap_adv_ad_struct_set(ARRAY_LENGTH(adv_data), adv_data, 0 , NULL);
-	ble_gap_adv_start(GAP_CONN_MODE_UNDIRECTED);
+	// Step 6.8 add the appropriate API to start the advertising in undirected mode
+        ble_gap_adv_start(GAP_CONN_MODE_UNDIRECTED);
+
 
 	for (;;)
 	{
@@ -150,24 +157,28 @@ void ble_task(void *pvParameters)
 			}
 		}
 
-		/* Notified HS3001 Task */
-		if (notif & HS3001_MEASUREMENT_NTF)
-		{
-			// Process all items on the measurement queue
-			OS_BASE_TYPE q_status = OS_QUEUE_OK;
-			while (q_status != OS_QUEUE_EMPTY)
-			{
-				// Get a measurement from the queue
-				hs300x_data_t sample = {0};
-				q_status = OS_QUEUE_GET(sample_q, &sample, OS_QUEUE_NO_WAIT);
+                /* Notified HS3001 Task */
+                if (notif & HS3001_MEASUREMENT_NOTIFY_MASK)
+                {
+                        // Process all items on the measurement queue
+                        OS_BASE_TYPE q_status = OS_QUEUE_OK;
+                        while (q_status != OS_QUEUE_EMPTY)
+                        {
+                                // Get a measurement from the queue
+                                hs300x_data_t sample = {0};
+                                q_status = OS_QUEUE_GET(sample_q, &sample, OS_QUEUE_NO_WAIT);
 
-				// if a measurement is available, notify all connected clients
-				if(q_status == OS_QUEUE_OK)
-				{
-					sensor_service_notify_measurement_to_all_connected((ble_service_t*)sensor_service_handle, &sample);
-				}
-			}
-		}
+                                // if a measurement is available, notify all connected clients
+                                if(q_status == OS_QUEUE_OK)
+                                {
+                                       /* Step 7.6
+                                          Add the appropriate API from sensor_service.h to notify all connected clients
+                                          that a new sample measurement is available
+                                       */
+                                       sensor_service_notify_measurement_to_all_connected((ble_service_t*)sensor_service_handle, &sample);
+                                }
+                        }
+                }
 	}
 }
 
@@ -195,8 +206,14 @@ static void get_sample_rate(ble_service_t *svc, uint16_t conn_idx)
  */
 static void get_sensor_id(ble_service_t *svc, uint16_t conn_idx)
 {
-	uint32_t id = hs300x_task_get_sensor_id();
-	sensor_service_get_sensor_id_cfm(svc, conn_idx, ATT_ERROR_OK, &id);
+        /* Step 7.2 - When a client attempts to read the Sensor ID characteristic,
+           this callback will invoked.
+           Add the appropriate API from hs300x_task.h to get the sensor ID
+           Then add the appropriate API from sensor_service.h to confirm the value
+           with the BLE client
+        */
+
+
 }
 
 /**
@@ -264,6 +281,12 @@ static void handle_evt_gap_pair_req(ble_evt_gap_pair_req_t *evt)
  */
 static void set_sample_rate(ble_service_t *svc, uint16_t conn_idx, const uint32_t new_rate)
 {
-	hs300x_task_set_sample_rate(new_rate);
-	sensor_service_set_sample_rate_cfm(svc, conn_idx, ATT_ERROR_OK);
+       /* Step 7.4 - When a client attempts to write the Sample Rate characteristic,
+          this callback will invoked.
+          Add the appropriate API from hs300x_task.h to set the Sample Rate
+          Then add the appropriate API from sensor_service.h to confirm with the client
+          the write has been processed
+       */
+        hs300x_task_set_sample_rate(new_rate);
+        sensor_service_set_sample_rate_cfm(svc, conn_idx, ATT_ERROR_OK);
 }

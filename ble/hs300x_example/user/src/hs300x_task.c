@@ -233,6 +233,8 @@ void hs300x_task_setup_hardware()
 /**
  * \brief Take a measurement from the HS300x
  *
+ * \param[in] sample       buffer to place measurement
+ *
  * \return void
  */
 static hs300x_error_t perform_measurement(hs300x_data_t *sample)
@@ -243,6 +245,8 @@ static hs300x_error_t perform_measurement(hs300x_data_t *sample)
 /**
  * \brief Process a measurement from the HS300x.
  *
+ * \param[in] sample       sample to process
+ *
  * \return void
  */
 static void process_measurement(hs300x_data_t sample)
@@ -251,5 +255,5 @@ static void process_measurement(hs300x_data_t sample)
 
     OS_QUEUE_PUT(sample_q, &sample, OS_QUEUE_NO_WAIT);
     if(measurement_notification_task)
-    	OS_TASK_NOTIFY(measurement_notification_task, HS3001_MEASUREMENT_NTF, OS_NOTIFY_SET_BITS);
+    	OS_TASK_NOTIFY(measurement_notification_task, HS3001_MEASUREMENT_NOTIFY_MASK, OS_NOTIFY_SET_BITS);
 }

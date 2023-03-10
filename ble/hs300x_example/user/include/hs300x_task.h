@@ -19,7 +19,7 @@
  *
  * Bit #0 is always assigned to BLE event queue notification.
  */
-#define HS3001_MEASUREMENT_NTF       (1 << 1)
+#define HS3001_MEASUREMENT_NOTIFY_MASK       (1 << 1)
 
 void hs300x_task_event_queue_register(const OS_TASK task_handle);
 void hs300x_task(void *pvParameters);
