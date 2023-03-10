@@ -66,6 +66,10 @@ void ble_task(void *pvParameters)
 	/* Set device name */
 	ble_gap_device_name_set(device_name, ATT_PERM_READ);
 
+	/* Set a random address*/
+	own_address_t random_addr = {PRIVATE_RANDOM_RESOLVABLE_ADDRESS};
+	ble_gap_address_set(&random_addr, 3600);
+
 	/*************************************************************************************************\
 	 * Initialize BLE services
 	 */
