@@ -363,66 +363,66 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
 	// Define descriptor of type Characteristic User Description for Sensor ID
 	ble_uuid_create16(UUID_GATT_CHAR_USER_DESCRIPTION, &uuid);
 	ble_gatts_add_descriptor(&uuid,
-							 ATT_PERM_READ,
-							 sizeof(sample_rate_char_user_description)-1,  // -1 to account for NULL char
-							 0,
-							 &sensor_service_handle->sample_rate_user_desc_h);
+                                 ATT_PERM_READ,
+                                 sizeof(sample_rate_char_user_description)-1,  // -1 to account for NULL char
+                                 0,
+                                 &sensor_service_handle->sample_rate_user_desc_h);
 
 	// Characteristic declaration for Measurement Value
 	ble_uuid_from_string("99999999-AAAA-BBBB-CCCC-DDDDDDDDDDDD", &uuid);
 	ble_gatts_add_characteristic(&uuid,
-								 GATT_PROP_NOTIFY,
-								 ATT_PERM_NONE,
-								 MEASUREMENT_VALUE_CHAR_SIZE,
-								 0,
-								 NULL,
-								 &sensor_service_handle->measurement_value_h);
+                                     GATT_PROP_NOTIFY,
+                                     ATT_PERM_NONE,
+                                     MEASUREMENT_VALUE_CHAR_SIZE,
+                                     0,
+                                     NULL,
+                                     &sensor_service_handle->measurement_value_h);
 
 	// Define descriptor of type Characteristic User Description for Measurement Value
 	ble_uuid_create16(UUID_GATT_CHAR_USER_DESCRIPTION, &uuid);
 	ble_gatts_add_descriptor(&uuid,
-							 ATT_PERM_READ,
-							 sizeof(measurement_value_char_user_description)-1, // -1 to account for NULL char
-							 0,
-							 &sensor_service_handle->measurement_value_user_desc_h);
+                                 ATT_PERM_READ,
+                                 sizeof(measurement_value_char_user_description)-1, // -1 to account for NULL char
+                                 0,
+                                 &sensor_service_handle->measurement_value_user_desc_h);
 
 	// Define descriptor of type Cleint Characteristic Configuration Descriptor for Measurement Value
 	ble_uuid_create16(UUID_GATT_CLIENT_CHAR_CONFIGURATION, &uuid);
 	ble_gatts_add_descriptor(&uuid,
-							 ATT_PERM_RW,
-							 2,
-							 0,
-							 &sensor_service_handle->measurement_value_ccc_h);
+                                 ATT_PERM_RW,
+                                 2,
+                                 0,
+                                 &sensor_service_handle->measurement_value_ccc_h);
 
 	/*
 	 * Register all the attribute handles so that they can be updated
 	 * by the BLE manager automatically.
 	 */
 	ble_gatts_register_service(&sensor_service_handle->svc.start_h,
-							   &sensor_service_handle->sensor_id_value_h,
-							   &sensor_service_handle->sensor_id_user_desc_h,
-							   &sensor_service_handle->sample_rate_value_h,
-							   &sensor_service_handle->sample_rate_user_desc_h,
-							   &sensor_service_handle->measurement_value_h,
-							   &sensor_service_handle->measurement_value_user_desc_h,
-							   &sensor_service_handle->measurement_value_ccc_h,
-							   0);
+                                   &sensor_service_handle->sensor_id_value_h,
+                                   &sensor_service_handle->sensor_id_user_desc_h,
+                                   &sensor_service_handle->sample_rate_value_h,
+                                   &sensor_service_handle->sample_rate_user_desc_h,
+                                   &sensor_service_handle->measurement_value_h,
+                                   &sensor_service_handle->measurement_value_user_desc_h,
+                                   &sensor_service_handle->measurement_value_ccc_h,
+                                   0);
 
 	// Calculate the last attribute handle of the BLE service
 	sensor_service_handle->svc.end_h = sensor_service_handle->svc.start_h + num_attr;
 
 	// Set default values for User Descriptions
 	ble_gatts_set_value(sensor_service_handle->sensor_id_user_desc_h,
-						sizeof(sensor_id_char_user_description)-1,
-						sensor_id_char_user_description);
+                            sizeof(sensor_id_char_user_description)-1,
+                            sensor_id_char_user_description);
 
 	ble_gatts_set_value(sensor_service_handle->sample_rate_user_desc_h,
-						sizeof(sample_rate_char_user_description)-1,
-						sample_rate_char_user_description);
+                            sizeof(sample_rate_char_user_description)-1,
+                            sample_rate_char_user_description);
 
 	ble_gatts_set_value(sensor_service_handle->measurement_value_user_desc_h,
-						sizeof(measurement_value_char_user_description)-1,
-						measurement_value_char_user_description);
+                            sizeof(measurement_value_char_user_description)-1,
+                            measurement_value_char_user_description);
 
 	// Register the BLE service in BLE framework
 	ble_service_add(&sensor_service_handle->svc);

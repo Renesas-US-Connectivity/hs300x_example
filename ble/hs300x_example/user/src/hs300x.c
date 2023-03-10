@@ -64,8 +64,8 @@ static void convert_raw_to_humid_temp(uint8_t *raw_data, bool data_includes_temp
  */
 static void gpio_config_to_port_and_pin(gpio_config config, HW_GPIO_PORT *port, HW_GPIO_PIN *pin)
 {
-	*port = (config.pin & 0x3F) >> HW_GPIO_PIN_BITS;
-	*pin = (config.pin) & ((1 << HW_GPIO_PIN_BITS) - 1);
+    *port = (config.pin & 0x3F) >> HW_GPIO_PIN_BITS;
+    *pin = (config.pin) & ((1 << HW_GPIO_PIN_BITS) - 1);
 }
 
 /**
@@ -226,9 +226,9 @@ hs300x_error_t hs300x_get_sensor_id(hs300x_handle_t *hs300x_handle, uint32_t* id
                     *id = (upper_rsp[1] << 24) | (upper_rsp[2] << 16) | (lower_rsp[1] << 8) | lower_rsp[2];
                 }
                 else if (error == HS300x_ERROR_NONE)
-			    {
+                {
                 	error = HS300x_ERROR_DATA_ACCESS_FAIL;
-			    }
+                }
             }
         }
         else if (error == HS300x_ERROR_NONE)
@@ -349,7 +349,7 @@ hs300x_error_t hs300x_set_resolution(hs300x_handle_t* hs300x_handle, hs300x_reso
             }
             else
             {
-				error = HS300x_ERROR_DATA_ACCESS_FAIL;
+                    error = HS300x_ERROR_DATA_ACCESS_FAIL;
             }
         }
     }

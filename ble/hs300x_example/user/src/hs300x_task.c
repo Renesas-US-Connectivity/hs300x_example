@@ -162,8 +162,8 @@ void hs300x_task(void *pvParameters)
  */
 void hs300x_task_event_queue_register(const OS_TASK task_handle)
 {
-	// Set event queue task handle
-	measurement_notification_task = task_handle;
+    // Set event queue task handle
+    measurement_notification_task = task_handle;
 }
 
 /**
@@ -174,11 +174,11 @@ void hs300x_task_event_queue_register(const OS_TASK task_handle)
  */
 uint32_t hs300x_task_get_sample_rate()
 {
-	uint32_t temp = 0;
-	OS_MUTEX_GET(sample_rate_mutex, OS_MUTEX_FOREVER);
-	temp = sample_rate_ms;
-	OS_MUTEX_PUT(sample_rate_mutex);
-	return temp;
+    uint32_t temp = 0;
+    OS_MUTEX_GET(sample_rate_mutex, OS_MUTEX_FOREVER);
+    temp = sample_rate_ms;
+    OS_MUTEX_PUT(sample_rate_mutex);
+    return temp;
 }
 
 /**
@@ -189,7 +189,7 @@ uint32_t hs300x_task_get_sample_rate()
  */
 uint32_t hs300x_task_get_sensor_id()
 {
-	return sensor_id;
+    return sensor_id;
 }
 
 /**
@@ -202,9 +202,9 @@ uint32_t hs300x_task_get_sensor_id()
  */
 void hs300x_task_set_sample_rate(uint32_t rate)
 {
-	OS_MUTEX_GET(sample_rate_mutex, OS_MUTEX_FOREVER);
-	sample_rate_ms = rate;
-	OS_MUTEX_PUT(sample_rate_mutex);
+    OS_MUTEX_GET(sample_rate_mutex, OS_MUTEX_FOREVER);
+    sample_rate_ms = rate;
+    OS_MUTEX_PUT(sample_rate_mutex);
 }
 
 /**
