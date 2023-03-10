@@ -27,14 +27,14 @@ typedef struct {
 	const sensor_service_cb_t *cb;
 
 	// Attribute handles of BLE service
-	uint16_t sensor_id_value_h;				// Sensor ID Value
+	uint16_t sensor_id_value_h;	                // Sensor ID Value
 	uint16_t sensor_id_user_desc_h;			// Sensor ID User Description
 
 	uint16_t sample_rate_value_h;			// Sample Rate Value
 	uint16_t sample_rate_user_desc_h;		// Sample Rate User Description
 
 	uint16_t measurement_value_h;			// Measurement Value
-	uint16_t measurement_value_user_desc_h;	// Measurement Value User Description
+	uint16_t measurement_value_user_desc_h;         // Measurement Value User Description
 	uint16_t measurement_value_ccc_h;		// Measurement Value Client Characteristic Configuration Descriptor. Used for notifications
 
 } sensor_service_t;
@@ -80,7 +80,7 @@ static void cleanup(ble_service_t *svc)
  * \brief This function is called when their is a read request for the Measurement Value Characteristic CCC
  *
  * \param[in] sensor_service_handle         pointer sensor service handle
- * \param[in] evt          					pointer to the read request
+ * \param[in] evt          		    pointer to the read request
  *
  * \return void
  */
@@ -99,7 +99,7 @@ static void handle_measurement_ccc_read(sensor_service_t *sensor_service_handle,
  * \brief This function is called when their is a write request for the Measurement Value Characteristic CCC
  *
  * \param[in] sensor_service_handle         pointer sensor service handle
- * \param[in] evt          					pointer to the write request
+ * \param[in] evt          		    pointer to the write request
  *
  * \return att_error_t indicating the status of the request.
  */
@@ -134,7 +134,7 @@ static att_error_t handle_measurement_ccc_write(sensor_service_t *sample_service
  * \brief This function is called when their is a read request for an attribute in our custom sensor service
  *
  * \param[in] sensor_service_handle         pointer service handle
- * \param[in] evt          					pointer to the read request
+ * \param[in] evt          		    pointer to the read request
  *
  * \return void
  */
@@ -171,7 +171,7 @@ static void handle_read_req(ble_service_t *svc, const ble_evt_gatts_read_req_t *
  * \brief This function is called when their is a read request for the Sample Rate
  *
  * \param[in] sensor_service_handle         pointer service handle
- * \param[in] evt          					pointer to the read request
+ * \param[in] evt          		    pointer to the read request
  *
  * \return void
  */
@@ -197,7 +197,7 @@ static void handle_sample_rate_read(sensor_service_t *sensor_service_handle, con
  * \brief This function is called when their is a write request for the Sample Rate
  *
  * \param[in] sensor_service_handle         pointer service handle
- * \param[in] evt          					pointer to the write request
+ * \param[in] evt          		    pointer to the write request
  *
  * \return att_error_t indicating the status of the request.
  */
@@ -238,7 +238,7 @@ static att_error_t handle_sample_rate_write(sensor_service_t *sensor_service_han
  * \brief This function is called when their is a read request for the Sensor ID
  *
  * \param[in] sensor_service_handle         pointer service handle
- * \param[in] evt          					pointer to the read request
+ * \param[in] evt          		    pointer to the read request
  *
  * \return void
  */
@@ -265,7 +265,7 @@ static void handle_sensor_id_read(sensor_service_t *sensor_service_handle, const
  * \brief This function is called when their is a write request for an attribute in our custom sensor service
  *
  * \param[in] sensor_service_handle         pointer service handle
- * \param[in] evt          					pointer to the write request
+ * \param[in] evt          		    pointer to the write request
  *
  * \return void
  */
@@ -435,7 +435,7 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
 /**
  * \brief This function should be called by the application in response to Sample Rate read requests
  *
- * \param[in] svc         	pointer to service handle
+ * \param[in] svc           pointer to service handle
  * \param[in] conn_idx      connection index of the client to send confirmation to
  * \param[in] status        status of the request
  * \param[in] value         sample rate value to respond with
@@ -452,7 +452,7 @@ void sensor_service_get_sample_rate_cfm(ble_service_t *svc, uint16_t conn_idx, a
 /**
  * \brief This function should be called by the application in response to Sensor ID read requests
  *
- * \param[in] svc         	pointer to service handle
+ * \param[in] svc           pointer to service handle
  * \param[in] conn_idx      connection index of the client to send confirmation to
  * \param[in] status        status of the request
  * \param[in] value         sensor ID value to respond with
@@ -470,7 +470,7 @@ void sensor_service_get_sensor_id_cfm(ble_service_t *svc, uint16_t conn_idx, att
 /**
  * \brief This function should be called by the application to notify a client of a new Measurement Value
  *
- * \param[in] svc         	pointer to service handle
+ * \param[in] svc           pointer to service handle
  * \param[in] conn_idx      connection index of the client to send notification to
  * \param[in] value         measurement value to notify client with
  *
@@ -497,7 +497,7 @@ void sensor_service_notify_measurement(ble_service_t *svc, uint16_t conn_idx, co
 /**
  * \brief This function can be called by the application to notify all connected clients of a new Measurement Value
  *
- * \param[in] svc         	pointer to service handle
+ * \param[in] svc           pointer to service handle
  * \param[in] value         measurement value to notify client with
  *
  * \return void
@@ -523,7 +523,7 @@ void sensor_service_notify_measurement_to_all_connected(ble_service_t *svc, cons
 /**
  * \brief This function should be called by the application in response to Sample Rate write requests
  *
- * \param[in] svc         	pointer to service handle
+ * \param[in] svc           pointer to service handle
  * \param[in] conn_idx      connection index of the client to send notification to
  * \param[in] status        status of the request
  *

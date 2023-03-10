@@ -94,7 +94,7 @@ void hs300x_task(void *pvParameters)
     hs300x_power_cycle_sensor(hs300x_handle.power_enable[0]);
     hs300x_handle.i2c_handle = hs300x_open(hs300x_i2c_config);
 
-    // Enter programming modde. Note programming mode must be entered within
+    // Enter programming mode. Note programming mode must be entered within
     // 10ms of the HS300x powering up. See section 6.8 of the datasheet.
     // Enter programming mode to:
     // 1. Retrieve Sensor ID

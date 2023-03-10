@@ -174,7 +174,7 @@ void ble_task(void *pvParameters)
 /**
  * \brief Callback to handle Sample Rate read requests
  *
- * \param[in] svc      			service handle
+ * \param[in] svc      		service handle
  * \param[in] conn_idx      	connection index associated with the client making the request
  *
  * \return void
@@ -188,7 +188,7 @@ static void get_sample_rate(ble_service_t *svc, uint16_t conn_idx)
 /**
  * \brief Callback to handle Sensor ID read requests
  *
- * \param[in] svc      			service handle
+ * \param[in] svc      		service handle
  * \param[in] conn_idx      	connection index associated with the client making the request
  *
  * \return void
@@ -202,7 +202,7 @@ static void get_sensor_id(ble_service_t *svc, uint16_t conn_idx)
 /**
  * \brief Handler for advertising completed event
  *
- * \param[in] evt      			pointer to the advertising completed event
+ * \param[in] evt      		pointer to the advertising completed event
  *
  * \return void
  */
@@ -218,7 +218,7 @@ static void handle_evt_gap_adv_completed(ble_evt_gap_adv_completed_t *evt)
 /**
  * \brief Handler for connected event
  *
- * \param[in] evt      			pointer to the connected event
+ * \param[in] evt      		pointer to the connected event
  *
  * \return void
  */
@@ -230,7 +230,7 @@ static void handle_evt_gap_connected(ble_evt_gap_connected_t *evt)
 /**
  * \brief Handler for disconnected event
  *
- * \param[in] evt      			pointer to the disconnected event
+ * \param[in] evt      		pointer to the disconnected event
  *
  * \return void
  */
@@ -246,7 +246,7 @@ static void handle_evt_gap_disconnected(ble_evt_gap_disconnected_t *evt)
 /**
  * \brief Handler for pairing request event
  *
- * \param[in] evt      			pointer to the pairing request event
+ * \param[in] evt      		pointer to the pairing request event
  *
  * \return void
  */
@@ -258,7 +258,7 @@ static void handle_evt_gap_pair_req(ble_evt_gap_pair_req_t *evt)
 /**
  * \brief Callback to handle Sample Rate write requests
  *
- * \param[in] evt      			pointer to the advertising completed event
+ * \param[in] evt      		pointer to the advertising completed event
  *
  * \return void
  */
