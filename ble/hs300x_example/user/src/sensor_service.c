@@ -335,30 +335,30 @@ ble_service_t *sensor_service_init(const sensor_service_cb_t *cb)
 	// Characteristic declaration for Sensor ID
 	ble_uuid_from_string("11111111-2222-3333-4444-555555555555", &uuid);
 	ble_gatts_add_characteristic(&uuid,
-								 GATT_PROP_READ,
-								 ATT_PERM_READ,
-								 SENSOR_ID_CHAR_SIZE,
-								 GATTS_FLAG_CHAR_READ_REQ,
-								 NULL,
-								 &sensor_service_handle->sensor_id_value_h);
+                                     GATT_PROP_READ,
+                                     ATT_PERM_READ,
+                                     SENSOR_ID_CHAR_SIZE,
+                                     GATTS_FLAG_CHAR_READ_REQ,
+                                     NULL,
+                                     &sensor_service_handle->sensor_id_value_h);
 
 	// Define descriptor of type Characteristic User Description for Sensor ID
 	ble_uuid_create16(UUID_GATT_CHAR_USER_DESCRIPTION, &uuid);
 	ble_gatts_add_descriptor(&uuid,
-							 ATT_PERM_READ,
-							 sizeof(sensor_id_char_user_description)-1, // -1 to account for NULL char
-							 0,
-							 &sensor_service_handle->sensor_id_user_desc_h);
+                                 ATT_PERM_READ,
+                                 sizeof(sensor_id_char_user_description)-1, // -1 to account for NULL char
+                                 0,
+                                 &sensor_service_handle->sensor_id_user_desc_h);
 
 	// Characteristic declaration for Sample Rate
 	ble_uuid_from_string("44444444-5555-6666-7777-888888888888", &uuid);
 	ble_gatts_add_characteristic(&uuid,
-								 GATT_PROP_READ | GATT_PROP_WRITE,
-								 ATT_PERM_RW,
-								 SAMPLE_RATE_CHAR_SIZE,
-								 GATTS_FLAG_CHAR_READ_REQ,
-								 NULL,
-								 &sensor_service_handle->sample_rate_value_h);
+                                     GATT_PROP_READ | GATT_PROP_WRITE,
+                                     ATT_PERM_RW,
+                                     SAMPLE_RATE_CHAR_SIZE,
+                                     GATTS_FLAG_CHAR_READ_REQ,
+                                     NULL,
+                                     &sensor_service_handle->sample_rate_value_h);
 
 	// Define descriptor of type Characteristic User Description for Sensor ID
 	ble_uuid_create16(UUID_GATT_CHAR_USER_DESCRIPTION, &uuid);
