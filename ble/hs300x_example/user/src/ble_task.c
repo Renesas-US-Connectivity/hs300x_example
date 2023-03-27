@@ -60,16 +60,16 @@ void ble_task(void *pvParameters)
 	 */
 	/* Start BLE device as peripheral */
 	// Step 6.2 add the appropriate API to start BLE as a peripheral
-	ble_peripheral_start();
+
 
 	/* Register task to BLE framework to receive BLE event notifications */
 	// Step 6.4 add the appropriate API to register the application to receive BLE event notifications
-	ble_register_app();
+
 
 	/* Set device name */
 	// Step 6.6 add the appropriate API to set the GAP device name.
 	// Note you should use the device_name variable above
-        ble_gap_device_name_set(device_name, ATT_PERM_READ);
+
 
 	/* Set a random address*/
 	own_address_t random_addr = {PRIVATE_RANDOM_RESOLVABLE_ADDRESS};
@@ -91,7 +91,7 @@ void ble_task(void *pvParameters)
 	 */
 	ble_gap_adv_ad_struct_set(ARRAY_LENGTH(adv_data), adv_data, 0 , NULL);
 	// Step 6.8 add the appropriate API to start the advertising in undirected mode
-        ble_gap_adv_start(GAP_CONN_MODE_UNDIRECTED);
+
 
 
 	for (;;)
@@ -175,7 +175,7 @@ void ble_task(void *pvParameters)
                                           Add the appropriate API from sensor_service.h to notify all connected clients
                                           that a new sample measurement is available
                                        */
-                                       sensor_service_notify_measurement_to_all_connected((ble_service_t*)sensor_service_handle, &sample);
+
                                 }
                         }
                 }
@@ -287,6 +287,5 @@ static void set_sample_rate(ble_service_t *svc, uint16_t conn_idx, const uint32_
           Then add the appropriate API from sensor_service.h to confirm with the client
           the write has been processed
        */
-        hs300x_task_set_sample_rate(new_rate);
-        sensor_service_set_sample_rate_cfm(svc, conn_idx, ATT_ERROR_OK);
+
 }
