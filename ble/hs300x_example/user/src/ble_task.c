@@ -60,7 +60,7 @@ void ble_task(void *pvParameters)
 	 */
 	/* Start BLE device as peripheral */
 	// Step 6.2 add the appropriate API to start BLE as a peripheral
-
+	ble_peripheral_start();
 
 	/* Register task to BLE framework to receive BLE event notifications */
 	// Step 6.4 add the appropriate API to register the application to receive BLE event notifications
