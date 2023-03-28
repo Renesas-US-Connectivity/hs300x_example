@@ -55,5 +55,4 @@ dkms.conf
 *.ld
 *.bin
 *makefile
-*.targets
 *.log
